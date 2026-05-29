@@ -30,39 +30,9 @@ with st.sidebar:
         if st.session_state.lang == "pt" else
         "⚠️ **Beta Version**\nSome features may be incomplete or subject to change."
     )
-    st.divider()
-
-    # ── Inventário (sidebar) ───────────────────────────────────────────────────
-    lang = st.session_state.lang
-    def t(pt, en): return pt if lang == "pt" else en
-
-    st.header("📦 " + t("Inventário", "Inventory"))
-
-    st.subheader("🏅 " + t("Medalhas (universais)", "Medals (universal)"))
-    medal_stock = st.number_input(
-        t("Total de Medalhas no estoque", "Total Medals in Stock"),
-        min_value=0, value=0, step=10_000, format="%d",
-    )
-
-    st.divider()
-    st.subheader("🎟️ " + t("Tokens / Cópias", "Tokens / Copies"))
-    st.caption(t(
-        "Por raridade. Inclua tokens e cópias juntos.",
-        "Rarity-specific. Enter total tokens + copies combined.",
-    ))
-    token_stock = {}
-    for rar, emoji in [("Legendary", "🟡"), ("Epic", "🟣"), ("Rare", "🔵")]:
-        rar_pt = {"Legendary": "Lendária", "Epic": "Épica", "Rare": "Rara"}[rar]
-        token_stock[rar] = st.number_input(
-            f"{emoji} {t(rar_pt, rar)} — {t('Tokens / Cópias', 'Tokens / Copies')}",
-            min_value=0, value=0, step=1, format="%d", key=f"tok_{rar}",
-        )
-
-    st.divider()
-    st.subheader("📋 " + t("Cópias por Skin", "Skin-Specific Copies"))
-    st.caption(t("Opcional — rastreie por skin se necessário.", "Optional — track per skin if needed."))
 
 lang = st.session_state.lang
+def t(pt, en): return pt if lang == "pt" else en
 
 # ── Game data ──────────────────────────────────────────────────────────────────
 SKINS = {
@@ -97,28 +67,23 @@ TOK_CUM     = {10: 1, 20: 2, 30: 4, 40: 7, 45: 10, 50: 13}
 
 HONOR_MEDALS = {"Legendary": 50_000, "Epic": 25_000, "Rare": 12_500}
 RATIO        = {"Legendary": 1, "Epic": 2, "Rare": 4}
-
-RAR_PT = {"Legendary": "Lendária", "Epic": "Épica", "Rare": "Rara"}
+RAR_PT       = {"Legendary": "Lendária", "Epic": "Épica", "Rare": "Rara"}
 
 
 def cum_medals(level: int, rarity: str) -> int:
     return LEG_CUM[max(1, min(50, level))] // RATIO[rarity]
 
-
 def tokens_for_milestones(cur_lv: int, tgt_lv: int) -> int:
     return sum(MS_TOKENS[m] for m in MILESTONES if cur_lv < m <= tgt_lv)
 
-
 def tok_cum_paid(cur_lv: int) -> int:
     return sum(MS_TOKENS[m] for m in MILESTONES if cur_lv >= m)
-
 
 def honor_medals_needed(cur_hl: int, tgt_hl: int, rarity: str, tokens_for_honor: int) -> int:
     hl_needed    = max(0, tgt_hl - cur_hl)
     hl_by_tokens = min(tokens_for_honor * 5, hl_needed)
     hl_by_medals = max(0, hl_needed - hl_by_tokens)
     return hl_by_medals * HONOR_MEDALS[rarity]
-
 
 def best_reachable_milestone(cur_lv: int, medal_stock: int, token_stock: int, rarity: str) -> int:
     paid = tok_cum_paid(cur_lv)
@@ -129,7 +94,6 @@ def best_reachable_milestone(cur_lv: int, medal_stock: int, token_stock: int, ra
         if med_need <= medal_stock and tok_need <= token_stock:
             best = m
     return best
-
 
 def next_milestone(best: int) -> int:
     for m in MILESTONES:
@@ -145,23 +109,50 @@ st.caption(t(
     "Plan medals, tokens, and your path to max level and Honor.",
 ))
 
-# ── Skin-specific copies (sidebar continued) ───────────────────────────────────
-skin_copies = {}
-with st.sidebar:
+# ── Inventário ─────────────────────────────────────────────────────────────────
+st.divider()
+st.subheader("📦 " + t("Inventário", "Inventory"))
+
+inv1, inv2, inv3, inv4 = st.columns(4)
+with inv1:
+    medal_stock = st.number_input(
+        t("🏅 Medalhas (universal)", "🏅 Medals (universal)"),
+        min_value=0, value=0, step=10_000, format="%d", key="medal_stock",
+    )
+token_stock = {}
+for col, (rar, emoji) in zip([inv2, inv3, inv4],
+                              [("Legendary", "🟡"), ("Epic", "🟣"), ("Rare", "🔵")]):
+    rar_label = t(RAR_PT[rar], rar)
+    with col:
+        token_stock[rar] = st.number_input(
+            f"{emoji} {t('Tokens', 'Tokens')} — {rar_label}",
+            min_value=0, value=0, step=1, format="%d", key=f"tok_{rar}",
+        )
+
+st.caption(t(
+    "Tokens e cópias da mesma raridade contam juntos.",
+    "Tokens and copies of the same rarity count together.",
+))
+
+with st.expander(t("📋 Cópias por Skin (opcional)", "📋 Skin-Specific Copies (optional)")):
+    skin_copies = {}
     for rar, skins in SKINS.items():
         emoji = "🟡" if rar == "Legendary" else ("🟣" if rar == "Epic" else "🔵")
-        rar_label = t(RAR_PT[rar], rar)
-        with st.expander(f"{emoji} {rar_label}"):
-            for skin in skins:
-                skin_copies[skin] = st.number_input(
-                    skin, min_value=0, value=0, step=1,
-                    key=f"copy_{skin}", format="%d",
+        st.markdown(f"**{emoji} {t(RAR_PT[rar], rar)}**")
+        cols = st.columns(len(skins))
+        for col, skin_name in zip(cols, skins):
+            with col:
+                skin_copies[skin_name] = st.number_input(
+                    skin_name, min_value=0, value=0, step=1,
+                    key=f"copy_{skin_name}", format="%d",
                 )
+        st.divider()
 
 # ── Seleção de skin ────────────────────────────────────────────────────────────
+st.divider()
 col_sel1, col_sel2 = st.columns(2)
 with col_sel1:
-    rar_opts  = list(SKINS.keys())
+    rar_opts      = list(SKINS.keys())
     rar_labels_pt = [t(RAR_PT[r], r) for r in rar_opts]
     rar_sel_label = st.selectbox(t("🎯 Raridade", "🎯 Rarity"), rar_labels_pt)
     rarity = rar_opts[rar_labels_pt.index(rar_sel_label)]
@@ -223,11 +214,11 @@ col_m, col_t = st.columns(2)
 
 with col_m:
     st.markdown(f"**🏅 {t('Medalhas', 'Medals')}**")
-    st.metric(t("Níveis (1–50)",         "Levels (1–50)"),        f"{med_levels:,}")
-    st.metric(t("Honor Levels (1–150)",  "Honor Levels (1–150)"), f"{med_honor:,}",
+    st.metric(t("Níveis (1–50)",        "Levels (1–50)"),         f"{med_levels:,}")
+    st.metric(t("Honor Levels (1–150)", "Honor Levels (1–150)"),  f"{med_honor:,}",
               help=t("Apenas HLs não cobertos por tokens.", "Only honor levels not covered by tokens."))
-    st.metric(t("TOTAL de Medalhas",     "TOTAL Medals Required"), f"{med_total:,}")
-    st.metric(t("Medalhas no estoque",   "Medals in Stock"),       f"{medal_stock:,}")
+    st.metric(t("TOTAL de Medalhas",    "TOTAL Medals Required"),  f"{med_total:,}")
+    st.metric(t("Medalhas no estoque",  "Medals in Stock"),        f"{medal_stock:,}")
     if med_missing > 0:
         st.error(t(f"❗ Medalhas faltando: **{med_missing:,}**", f"❗ Medals Still Needed: **{med_missing:,}**"))
     else:
@@ -235,11 +226,11 @@ with col_m:
 
 with col_t:
     st.markdown(f"**🎟️ {t('Tokens / Cópias', 'Tokens / Copies')}**")
-    st.metric(t("Buffs de Milestone",    "Milestone Buffs"),       f"{tok_milestones}",
+    st.metric(t("Buffs de Milestone",  "Milestone Buffs"),         f"{tok_milestones}",
               help="Lv10=1 · Lv20=1 · Lv30=2 · Lv40=3 · Lv45=3 · Lv50=3")
-    st.metric(t("Honor Levels",          "Honor Levels"),          f"{tokens_for_honor}")
-    st.metric(t("TOTAL de Tokens",       "TOTAL Tokens Required"), f"{tok_total}")
-    st.metric(t("Tokens no estoque",     "Tokens in Stock"),       f"{tok_avail:,}")
+    st.metric(t("Honor Levels",        "Honor Levels"),            f"{tokens_for_honor}")
+    st.metric(t("TOTAL de Tokens",     "TOTAL Tokens Required"),   f"{tok_total}")
+    st.metric(t("Tokens no estoque",   "Tokens in Stock"),         f"{tok_avail:,}")
     st.metric(f"{t('Cópias de', 'Copies of')} '{skin}'",          f"{skin_copy_stock:,}")
     if tok_missing > 0:
         st.error(t(f"❗ Tokens faltando: **{tok_missing}**", f"❗ Tokens Still Needed: **{tok_missing}**"))
@@ -295,14 +286,14 @@ with st.expander(t(
         prev = LEG_CUM.get(lv - 1, 0)
         cost = (LEG_CUM[lv] - prev) // RATIO[rarity]
         rows.append({
-            t("Nível", "Level"):             f"{lv} {STAR_LABELS.get(lv, '')}",
-            t("Custo de Medalhas", "Medal Cost"): cost if lv > 1 else 0,
-            t("Tokens no Milestone", "Tokens at Milestone"): MS_TOKENS.get(lv, "—"),
+            t("Nível", "Level"):                          f"{lv} {STAR_LABELS.get(lv, '')}",
+            t("Custo de Medalhas", "Medal Cost"):         cost if lv > 1 else 0,
+            t("Tokens no Milestone", "Tokens at MS"):     MS_TOKENS.get(lv, "—"),
             t("Medalhas Acumuladas", "Cumulative Medals"): LEG_CUM[lv] // RATIO[rarity],
         })
 
     def highlight_ms(row):
-        lv_num = int(row[t("Nível","Level")].split()[0])
+        lv_num = int(row[t("Nível", "Level")].split()[0])
         return (["background-color: #e65100; color: white"] * len(row)
                 if lv_num in MILESTONES else [""] * len(row))
 
@@ -312,9 +303,9 @@ with st.expander(t(
     )
 
     totals = {
-        t("Total Medalhas (Nível 1→50)",  "Total Medals (Lv 1→50)"):    f"{LEG_CUM[50] // RATIO[rarity]:,}",
-        t("Total Tokens (Nível 1→50)",    "Total Tokens (Lv 1→50)"):    "13",
-        t("Medalhas Honor (HL 1→150)",    "Honor Medals (HL 1→150)"):   f"{HONOR_MEDALS[rarity] * 150:,}",
-        t("Tokens Honor (HL 1→150)",      "Honor Tokens (HL 1→150)"):   "120",
+        t("Total Medalhas (Nível 1→50)",  "Total Medals (Lv 1→50)"):  f"{LEG_CUM[50] // RATIO[rarity]:,}",
+        t("Total Tokens (Nível 1→50)",    "Total Tokens (Lv 1→50)"):  "13",
+        t("Medalhas Honor (HL 1→150)",    "Honor Medals (HL 1→150)"): f"{HONOR_MEDALS[rarity] * 150:,}",
+        t("Tokens Honor (HL 1→150)",      "Honor Tokens (HL 1→150)"): "120",
     }
     st.table(pd.DataFrame(totals.items(), columns=["", "Value"]).set_index(""))
