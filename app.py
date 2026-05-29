@@ -56,7 +56,7 @@ st.markdown(
 )
 st.divider()
 
-col1, col2 = st.columns(2, gap="large")
+col1, col2, col3, col4 = st.columns(4, gap="large")
 
 with col1:
     with st.container(border=True):
@@ -78,6 +78,28 @@ with col2:
             "Plans **Dragon Essence** and **Dragon Dust** spending on Brilliance buildings and research, with Castle prerequisite chain."
         )
         st.page_link("pages/2_DE_Dust.py",
+                     label="Abrir →" if lang == "pt" else "Open →")
+
+with col3:
+    with st.container(border=True):
+        st.subheader("🐾 " + ("Calculadora de Pets" if lang == "pt" else "Pet Calculator"))
+        st.markdown(
+            "Calcula **comida, essência e cópias** necessárias para evoluir e promover seus pets até Epic, Legendary e Mythic."
+            if lang == "pt" else
+            "Calculates **food, essence and copies** needed to level up and promote pets to Epic, Legendary, and Mythic."
+        )
+        st.page_link("pages/3_Pets.py",
+                     label="Abrir →" if lang == "pt" else "Open →")
+
+with col4:
+    with st.container(border=True):
+        st.subheader("🧢 " + ("Skins de Tropas" if lang == "pt" else "Troop Skins"))
+        st.markdown(
+            "Calcula **medalhas e tokens** necessários para subir o nível e as Honor Levels das skins de tropas."
+            if lang == "pt" else
+            "Calculates **medals and tokens** needed to level up troop skins and unlock Honor Levels."
+        )
+        st.page_link("pages/4_Troop_Skins.py",
                      label="Abrir →" if lang == "pt" else "Open →")
 
 st.divider()
