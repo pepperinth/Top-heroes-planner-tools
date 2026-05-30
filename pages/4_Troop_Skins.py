@@ -109,23 +109,22 @@ st.caption(t(
     "Plan medals, tokens, and your path to max level and Honor.",
 ))
 
-# ── Inventário ─────────────────────────────────────────────────────────────────
+# ── INVENTÁRIO (compartilhado entre abas) ──────────────────────────────────────
 st.divider()
 st.subheader("📦 " + t("Inventário", "Inventory"))
 
 inv1, inv2, inv3, inv4 = st.columns(4)
 with inv1:
     medal_stock = st.number_input(
-        t("🏅 Medalhas (universal)", "🏅 Medals (universal)"),
+        t("🏅 Medalhas", "🏅 Medals"),
         min_value=0, value=0, step=10_000, format="%d", key="medal_stock",
     )
 token_stock = {}
 for col, (rar, emoji) in zip([inv2, inv3, inv4],
                               [("Legendary", "🟡"), ("Epic", "🟣"), ("Rare", "🔵")]):
-    rar_label = t(RAR_PT[rar], rar)
     with col:
         token_stock[rar] = st.number_input(
-            f"{emoji} {t('Tokens', 'Tokens')} — {rar_label}",
+            f"{emoji} {t('Tokens', 'Tokens')} — {t(RAR_PT[rar], rar)}",
             min_value=0, value=0, step=1, format="%d", key=f"tok_{rar}",
         )
 
@@ -148,164 +147,279 @@ with st.expander(t("📋 Cópias por Skin (opcional)", "📋 Skin-Specific Copie
                 )
         st.divider()
 
-# ── Seleção de skin ────────────────────────────────────────────────────────────
+# ── ABAS ───────────────────────────────────────────────────────────────────────
 st.divider()
-col_sel1, col_sel2 = st.columns(2)
-with col_sel1:
-    rar_opts      = list(SKINS.keys())
-    rar_labels_pt = [t(RAR_PT[r], r) for r in rar_opts]
-    rar_sel_label = st.selectbox(t("🎯 Raridade", "🎯 Rarity"), rar_labels_pt)
-    rarity = rar_opts[rar_labels_pt.index(rar_sel_label)]
-with col_sel2:
-    skin = st.selectbox(t("🎯 Skin", "🎯 Skin"), SKINS[rarity])
+tab_calc, tab_plan = st.tabs([
+    "🧢 " + t("Calculadora", "Calculator"),
+    "📋 " + t("Planejador de Lote", "Batch Planner"),
+])
 
-st.divider()
+# ══════════════════════════════════════════════════════════════════════════════
+# ABA 1 — CALCULADORA
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_calc:
+    col_sel1, col_sel2 = st.columns(2)
+    with col_sel1:
+        rar_opts      = list(SKINS.keys())
+        rar_labels_pt = [t(RAR_PT[r], r) for r in rar_opts]
+        rar_sel_label = st.selectbox(t("🎯 Raridade", "🎯 Rarity"), rar_labels_pt)
+        rarity = rar_opts[rar_labels_pt.index(rar_sel_label)]
+    with col_sel2:
+        skin = st.selectbox(t("🎯 Skin", "🎯 Skin"), SKINS[rarity])
 
-# ── Inputs de nível e honor ────────────────────────────────────────────────────
-col_lv, col_hl = st.columns(2)
-with col_lv:
-    st.subheader(t("🎮 Nível (1–50)", "🎮 Level (1–50)"))
-    c1, c2 = st.columns(2)
-    cur_lv = c1.number_input(t("Atual", "Current"), min_value=1, max_value=50, value=1, key="cur_lv")
-    tgt_lv = c2.number_input(t("Alvo",  "Target"),  min_value=1, max_value=50, value=50, key="tgt_lv")
+    st.divider()
 
-with col_hl:
-    st.subheader(t("🏆 Honor Level (0–150)", "🏆 Honor Level (0–150)"))
-    st.caption(t(
-        "⚠️ Disponível após Nível 50 + tokens do milestone Nível 50.",
-        "⚠️ Unlocks after Level 50 + Level 50 milestone tokens.",
-    ))
-    c3, c4 = st.columns(2)
-    cur_hl = c3.number_input(t("Atual", "Current"), min_value=0, max_value=150, value=0, key="cur_hl")
-    tgt_hl = c4.number_input(t("Alvo",  "Target"),  min_value=0, max_value=150, value=0, key="tgt_hl")
+    col_lv, col_hl = st.columns(2)
+    with col_lv:
+        st.subheader(t("🎮 Nível (1–50)", "🎮 Level (1–50)"))
+        c1, c2 = st.columns(2)
+        cur_lv = c1.number_input(t("Atual", "Current"), min_value=1, max_value=50, value=1, key="cur_lv")
+        tgt_lv = c2.number_input(t("Alvo",  "Target"),  min_value=1, max_value=50, value=50, key="tgt_lv")
 
-tokens_for_honor = st.number_input(
-    t("🎟️ Tokens a usar em Honor Levels", "🎟️ Tokens to use for Honor Levels"),
-    min_value=0, value=0, step=1, format="%d",
-    help=t(
-        "1 token = 5 Honor Levels (HL 1–100) · 1 token = 0,5 levels (HL 101–150). "
-        "Os restantes serão cobertos por medalhas.",
-        "1 token = 5 Honor Levels (HL 1–100) · 1 token = 0.5 levels (HL 101–150). "
-        "Remaining honor levels will be covered by medals.",
-    ),
-)
+    with col_hl:
+        st.subheader(t("🏆 Honor Level (0–150)", "🏆 Honor Level (0–150)"))
+        st.caption(t(
+            "⚠️ Disponível após Nível 50 + tokens do milestone Nível 50.",
+            "⚠️ Unlocks after Level 50 + Level 50 milestone tokens.",
+        ))
+        c3, c4 = st.columns(2)
+        cur_hl = c3.number_input(t("Atual", "Current"), min_value=0, max_value=150, value=0, key="cur_hl")
+        tgt_hl = c4.number_input(t("Alvo",  "Target"),  min_value=0, max_value=150, value=0, key="tgt_hl")
 
-st.divider()
-
-# ── Cálculos ───────────────────────────────────────────────────────────────────
-med_levels  = max(0, cum_medals(tgt_lv, rarity) - cum_medals(cur_lv, rarity)) if tgt_lv > cur_lv else 0
-med_honor   = honor_medals_needed(cur_hl, tgt_hl, rarity, tokens_for_honor)
-med_total   = med_levels + med_honor
-med_missing = max(0, med_total - medal_stock)
-med_surplus = max(0, medal_stock - med_total)
-
-tok_milestones = tokens_for_milestones(cur_lv, tgt_lv)
-tok_total      = tok_milestones + tokens_for_honor
-tok_avail      = token_stock[rarity]
-tok_missing    = max(0, tok_total - tok_avail)
-tok_surplus    = max(0, tok_avail - tok_total)
-
-skin_copy_stock = skin_copies.get(skin, 0)
-
-# ── Resultados ─────────────────────────────────────────────────────────────────
-st.subheader("📊 " + t("Necessário para atingir o alvo", "Required to Reach Target"))
-
-col_m, col_t = st.columns(2)
-
-with col_m:
-    st.markdown(f"**🏅 {t('Medalhas', 'Medals')}**")
-    st.metric(t("Níveis (1–50)",        "Levels (1–50)"),         f"{med_levels:,}")
-    st.metric(t("Honor Levels (1–150)", "Honor Levels (1–150)"),  f"{med_honor:,}",
-              help=t("Apenas HLs não cobertos por tokens.", "Only honor levels not covered by tokens."))
-    st.metric(t("TOTAL de Medalhas",    "TOTAL Medals Required"),  f"{med_total:,}")
-    st.metric(t("Medalhas no estoque",  "Medals in Stock"),        f"{medal_stock:,}")
-    if med_missing > 0:
-        st.error(t(f"❗ Medalhas faltando: **{med_missing:,}**", f"❗ Medals Still Needed: **{med_missing:,}**"))
-    else:
-        st.success(t(f"✅ Saldo de medalhas: **{med_surplus:,}**", f"✅ Medal Surplus: **{med_surplus:,}**"))
-
-with col_t:
-    st.markdown(f"**🎟️ {t('Tokens / Cópias', 'Tokens / Copies')}**")
-    st.metric(t("Buffs de Milestone",  "Milestone Buffs"),         f"{tok_milestones}",
-              help="Lv10=1 · Lv20=1 · Lv30=2 · Lv40=3 · Lv45=3 · Lv50=3")
-    st.metric(t("Honor Levels",        "Honor Levels"),            f"{tokens_for_honor}")
-    st.metric(t("TOTAL de Tokens",     "TOTAL Tokens Required"),   f"{tok_total}")
-    st.metric(t("Tokens no estoque",   "Tokens in Stock"),         f"{tok_avail:,}")
-    st.metric(f"{t('Cópias de', 'Copies of')} '{skin}'",          f"{skin_copy_stock:,}")
-    if tok_missing > 0:
-        st.error(t(f"❗ Tokens faltando: **{tok_missing}**", f"❗ Tokens Still Needed: **{tok_missing}**"))
-    else:
-        st.success(t(f"✅ Saldo de tokens: **{tok_surplus}**", f"✅ Token Surplus: **{tok_surplus}**"))
-
-st.divider()
-
-# ── Simulação ──────────────────────────────────────────────────────────────────
-st.subheader("🔭 " + t(
-    "Simulação — Até onde você chega com o estoque atual?",
-    "Simulation — What Can You Reach With Your Current Stock?",
-))
-
-best_ms  = best_reachable_milestone(cur_lv, medal_stock, tok_avail, rarity)
-next_ms  = next_milestone(best_ms)
-paid_tok = tok_cum_paid(cur_lv)
-
-if best_ms == 0:
-    st.warning(t(
-        "⚠️ Seu estoque atual não é suficiente para atingir o próximo milestone a partir do nível atual.",
-        "⚠️ Your current stock is not enough to reach the next milestone from your current level.",
-    ))
-else:
-    reach_label = f"{t('Nível', 'Level')} {best_ms} {STAR_LABELS[best_ms]}"
-    st.success(t(
-        f"✅ Milestone mais avançado alcançável: **{reach_label}**",
-        f"✅ Furthest milestone reachable: **{reach_label}**",
-    ))
-
-next_med_need = max(0, cum_medals(next_ms, rarity) - cum_medals(cur_lv, rarity) - medal_stock)
-next_tok_need = max(0, TOK_CUM.get(next_ms, 0) - paid_tok - tok_avail)
-
-col_s1, col_s2, col_s3 = st.columns(3)
-col_s1.metric(t("🔜 Próximo Milestone", "🔜 Next Milestone"),
-              f"{t('Nível','Level')} {next_ms} {STAR_LABELS[next_ms]}")
-col_s2.metric(t("🏅 Medalhas para o próximo", "🏅 Medals Missing for Next"), f"{next_med_need:,}")
-col_s3.metric(t("🎟️ Tokens para o próximo",   "🎟️ Tokens Missing for Next"), f"{next_tok_need}")
-
-col_s4, col_s5 = st.columns(2)
-col_s4.metric(t("🏅 Saldo de medalhas após alvo", "🏅 Medal Surplus After Target"), f"{med_surplus:,}")
-col_s5.metric(t("🎟️ Saldo de tokens após alvo",   "🎟️ Token Surplus After Target"), f"{tok_surplus}")
-
-st.divider()
-
-# ── Tabela de referência ────────────────────────────────────────────────────────
-with st.expander(t(
-    f"📊 Referência — Custo de medalhas por nível ({t(RAR_PT[rarity], rarity)})",
-    f"📊 Reference — Medal Cost Per Level ({rarity})",
-)):
-    rows = []
-    for lv in range(1, 51):
-        prev = LEG_CUM.get(lv - 1, 0)
-        cost = (LEG_CUM[lv] - prev) // RATIO[rarity]
-        rows.append({
-            t("Nível", "Level"):                          f"{lv} {STAR_LABELS.get(lv, '')}",
-            t("Custo de Medalhas", "Medal Cost"):         cost if lv > 1 else 0,
-            t("Tokens no Milestone", "Tokens at MS"):     MS_TOKENS.get(lv, "—"),
-            t("Medalhas Acumuladas", "Cumulative Medals"): LEG_CUM[lv] // RATIO[rarity],
-        })
-
-    def highlight_ms(row):
-        lv_num = int(row[t("Nível", "Level")].split()[0])
-        return (["background-color: #e65100; color: white"] * len(row)
-                if lv_num in MILESTONES else [""] * len(row))
-
-    st.dataframe(
-        pd.DataFrame(rows).style.apply(highlight_ms, axis=1),
-        use_container_width=True, hide_index=True,
+    tokens_for_honor = st.number_input(
+        t("🎟️ Tokens a usar em Honor Levels", "🎟️ Tokens to use for Honor Levels"),
+        min_value=0, value=0, step=1, format="%d",
+        help=t(
+            "1 token = 5 Honor Levels (HL 1–100) · 1 token = 0,5 levels (HL 101–150). "
+            "Os restantes serão cobertos por medalhas.",
+            "1 token = 5 Honor Levels (HL 1–100) · 1 token = 0.5 levels (HL 101–150). "
+            "Remaining honor levels will be covered by medals.",
+        ),
     )
 
-    totals = {
-        t("Total Medalhas (Nível 1→50)",  "Total Medals (Lv 1→50)"):  f"{LEG_CUM[50] // RATIO[rarity]:,}",
-        t("Total Tokens (Nível 1→50)",    "Total Tokens (Lv 1→50)"):  "13",
-        t("Medalhas Honor (HL 1→150)",    "Honor Medals (HL 1→150)"): f"{HONOR_MEDALS[rarity] * 150:,}",
-        t("Tokens Honor (HL 1→150)",      "Honor Tokens (HL 1→150)"): "120",
-    }
-    st.table(pd.DataFrame(totals.items(), columns=["", "Value"]).set_index(""))
+    st.divider()
+
+    med_levels  = max(0, cum_medals(tgt_lv, rarity) - cum_medals(cur_lv, rarity)) if tgt_lv > cur_lv else 0
+    med_honor   = honor_medals_needed(cur_hl, tgt_hl, rarity, tokens_for_honor)
+    med_total   = med_levels + med_honor
+    med_missing = max(0, med_total - medal_stock)
+    med_surplus = max(0, medal_stock - med_total)
+
+    tok_milestones = tokens_for_milestones(cur_lv, tgt_lv)
+    tok_total      = tok_milestones + tokens_for_honor
+    tok_avail      = token_stock[rarity]
+    tok_missing    = max(0, tok_total - tok_avail)
+    tok_surplus    = max(0, tok_avail - tok_total)
+
+    skin_copy_stock = skin_copies.get(skin, 0)
+
+    st.subheader("📊 " + t("Necessário para atingir o alvo", "Required to Reach Target"))
+    col_m, col_t = st.columns(2)
+
+    with col_m:
+        st.markdown(f"**🏅 {t('Medalhas', 'Medals')}**")
+        st.metric(t("Níveis (1–50)",        "Levels (1–50)"),         f"{med_levels:,}")
+        st.metric(t("Honor Levels (1–150)", "Honor Levels (1–150)"),  f"{med_honor:,}",
+                  help=t("Apenas HLs não cobertos por tokens.", "Only honor levels not covered by tokens."))
+        st.metric(t("TOTAL de Medalhas",    "TOTAL Medals Required"),  f"{med_total:,}")
+        st.metric(t("Medalhas no estoque",  "Medals in Stock"),        f"{medal_stock:,}")
+        if med_missing > 0:
+            st.error(t(f"❗ Medalhas faltando: **{med_missing:,}**", f"❗ Medals Still Needed: **{med_missing:,}**"))
+        else:
+            st.success(t(f"✅ Saldo: **{med_surplus:,}**", f"✅ Medal Surplus: **{med_surplus:,}**"))
+
+    with col_t:
+        st.markdown(f"**🎟️ {t('Tokens / Cópias', 'Tokens / Copies')}**")
+        st.metric(t("Buffs de Milestone",  "Milestone Buffs"),         f"{tok_milestones}",
+                  help="Lv10=1 · Lv20=1 · Lv30=2 · Lv40=3 · Lv45=3 · Lv50=3")
+        st.metric(t("Honor Levels",        "Honor Levels"),            f"{tokens_for_honor}")
+        st.metric(t("TOTAL de Tokens",     "TOTAL Tokens Required"),   f"{tok_total}")
+        st.metric(t("Tokens no estoque",   "Tokens in Stock"),         f"{tok_avail:,}")
+        st.metric(f"{t('Cópias de', 'Copies of')} '{skin}'",          f"{skin_copy_stock:,}")
+        if tok_missing > 0:
+            st.error(t(f"❗ Tokens faltando: **{tok_missing}**", f"❗ Tokens Still Needed: **{tok_missing}**"))
+        else:
+            st.success(t(f"✅ Saldo: **{tok_surplus}**", f"✅ Token Surplus: **{tok_surplus}**"))
+
+    st.divider()
+    st.subheader("🔭 " + t(
+        "Simulação — Até onde você chega com o estoque atual?",
+        "Simulation — What Can You Reach With Your Current Stock?",
+    ))
+
+    best_ms  = best_reachable_milestone(cur_lv, medal_stock, tok_avail, rarity)
+    next_ms  = next_milestone(best_ms)
+    paid_tok = tok_cum_paid(cur_lv)
+
+    if best_ms == 0:
+        st.warning(t(
+            "⚠️ Seu estoque atual não é suficiente para atingir o próximo milestone.",
+            "⚠️ Your current stock is not enough to reach the next milestone.",
+        ))
+    else:
+        reach_label = f"{t('Nível', 'Level')} {best_ms} {STAR_LABELS[best_ms]}"
+        st.success(t(
+            f"✅ Milestone mais avançado alcançável: **{reach_label}**",
+            f"✅ Furthest milestone reachable: **{reach_label}**",
+        ))
+
+    next_med_need = max(0, cum_medals(next_ms, rarity) - cum_medals(cur_lv, rarity) - medal_stock)
+    next_tok_need = max(0, TOK_CUM.get(next_ms, 0) - paid_tok - tok_avail)
+
+    col_s1, col_s2, col_s3 = st.columns(3)
+    col_s1.metric(t("🔜 Próximo Milestone", "🔜 Next Milestone"),
+                  f"{t('Nível','Level')} {next_ms} {STAR_LABELS[next_ms]}")
+    col_s2.metric(t("🏅 Medalhas para o próximo", "🏅 Medals Missing for Next"), f"{next_med_need:,}")
+    col_s3.metric(t("🎟️ Tokens para o próximo",   "🎟️ Tokens Missing for Next"), f"{next_tok_need}")
+
+    col_s4, col_s5 = st.columns(2)
+    col_s4.metric(t("🏅 Saldo de medalhas após alvo", "🏅 Medal Surplus After Target"), f"{med_surplus:,}")
+    col_s5.metric(t("🎟️ Saldo de tokens após alvo",   "🎟️ Token Surplus After Target"), f"{tok_surplus}")
+
+    st.divider()
+    with st.expander(t(
+        f"📊 Referência — Custo de medalhas por nível ({t(RAR_PT[rarity], rarity)})",
+        f"📊 Reference — Medal Cost Per Level ({rarity})",
+    )):
+        rows = []
+        for lv in range(1, 51):
+            prev = LEG_CUM.get(lv - 1, 0)
+            cost = (LEG_CUM[lv] - prev) // RATIO[rarity]
+            rows.append({
+                t("Nível", "Level"):                           f"{lv} {STAR_LABELS.get(lv, '')}",
+                t("Custo de Medalhas", "Medal Cost"):          cost if lv > 1 else 0,
+                t("Tokens no Milestone", "Tokens at MS"):      MS_TOKENS.get(lv, "—"),
+                t("Medalhas Acumuladas", "Cumulative Medals"):  LEG_CUM[lv] // RATIO[rarity],
+            })
+
+        def highlight_ms(row):
+            lv_num = int(row[t("Nível", "Level")].split()[0])
+            return (["background-color: #e65100; color: white"] * len(row)
+                    if lv_num in MILESTONES else [""] * len(row))
+
+        st.dataframe(
+            pd.DataFrame(rows).style.apply(highlight_ms, axis=1),
+            use_container_width=True, hide_index=True,
+        )
+        totals = {
+            t("Total Medalhas (Nível 1→50)",  "Total Medals (Lv 1→50)"):  f"{LEG_CUM[50] // RATIO[rarity]:,}",
+            t("Total Tokens (Nível 1→50)",    "Total Tokens (Lv 1→50)"):  "13",
+            t("Medalhas Honor (HL 1→150)",    "Honor Medals (HL 1→150)"): f"{HONOR_MEDALS[rarity] * 150:,}",
+            t("Tokens Honor (HL 1→150)",      "Honor Tokens (HL 1→150)"): "120",
+        }
+        st.table(pd.DataFrame(totals.items(), columns=["", "Value"]).set_index(""))
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ABA 2 — PLANEJADOR DE LOTE
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_plan:
+    st.caption(t(
+        "Monte um plano com múltiplas skins e veja o custo total consolidado de medalhas e tokens.",
+        "Build a plan with multiple skins and see the total consolidated medal and token cost.",
+    ))
+
+    if "skin_plan" not in st.session_state:
+        st.session_state["skin_plan"] = []
+
+    # ── Formulário de entrada ──────────────────────────────────────────────────
+    st.markdown("**➕ " + t("Adicionar skin ao plano", "Add skin to plan") + "**")
+
+    sp1, sp2 = st.columns(2)
+    with sp1:
+        sp_rar_opts      = list(SKINS.keys())
+        sp_rar_labels_pt = [t(RAR_PT[r], r) for r in sp_rar_opts]
+        sp_rar_label     = st.selectbox(t("Raridade", "Rarity"), sp_rar_labels_pt, key="sp_rar")
+        sp_rar = sp_rar_opts[sp_rar_labels_pt.index(sp_rar_label)]
+    with sp2:
+        sp_skin = st.selectbox(t("Skin", "Skin"), SKINS[sp_rar], key="sp_skin")
+
+    sp3, sp4, sp5, sp6 = st.columns(4)
+    sp_cur_lv = sp3.number_input(t("Nível atual", "Current level"), 1, 50, 1, key="sp_cur_lv")
+    sp_tgt_lv = sp4.number_input(t("Nível alvo",  "Target level"),  1, 50, 50, key="sp_tgt_lv")
+    sp_cur_hl = sp5.number_input(t("HL atual", "Current HL"), 0, 150, 0, key="sp_cur_hl")
+    sp_tgt_hl = sp6.number_input(t("HL alvo",  "Target HL"),  0, 150, 0, key="sp_tgt_hl")
+
+    if st.button("➕ " + t("Adicionar", "Add"), key="sp_add"):
+        if sp_tgt_lv < sp_cur_lv:
+            st.warning(t("⚠️ Nível alvo menor que o atual.", "⚠️ Target level is below current level."))
+        else:
+            sp_med_lv = max(0, cum_medals(sp_tgt_lv, sp_rar) - cum_medals(sp_cur_lv, sp_rar))
+            sp_med_hl = honor_medals_needed(sp_cur_hl, sp_tgt_hl, sp_rar, 0)
+            sp_tokens  = tokens_for_milestones(sp_cur_lv, sp_tgt_lv)
+            st.session_state["skin_plan"].append({
+                "rarity":  sp_rar,
+                "skin":    sp_skin,
+                "cur_lv":  sp_cur_lv,
+                "tgt_lv":  sp_tgt_lv,
+                "cur_hl":  sp_cur_hl,
+                "tgt_hl":  sp_tgt_hl,
+                "medals":  sp_med_lv + sp_med_hl,
+                "tokens":  sp_tokens,
+            })
+
+    plan = st.session_state["skin_plan"]
+
+    if not plan:
+        st.info(t("Nenhuma skin no plano ainda. Adicione acima ↑", "No skins in plan yet. Add above ↑"))
+    else:
+        st.divider()
+
+        # ── Tabela do plano ────────────────────────────────────────────────────
+        _sr = t("Raridade", "Rarity")
+        _ss = t("Skin", "Skin")
+        _scl = t("Nív. Atual", "Cur. Lv")
+        _stl = t("Nív. Alvo",  "Tgt. Lv")
+        _shl = t("HL Atual", "Cur. HL")
+        _sth = t("HL Alvo",  "Tgt. HL")
+        _sm  = "🏅 " + t("Medalhas", "Medals")
+        _stk = "🎟️ " + t("Tokens",   "Tokens")
+
+        rows = [{
+            _sr: t(RAR_PT[e["rarity"]], e["rarity"]),
+            _ss: e["skin"],
+            _scl: e["cur_lv"], _stl: e["tgt_lv"],
+            _shl: e["cur_hl"], _sth: e["tgt_hl"],
+            _sm: e["medals"],  _stk: e["tokens"],
+        } for e in plan]
+        st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+
+        # ── Totais ─────────────────────────────────────────────────────────────
+        total_medals = sum(e["medals"] for e in plan)
+        st.markdown("**📊 " + t("Totais vs. estoque", "Totals vs. stock") + "**")
+
+        tm1, tm2, tm3, tm4 = st.columns(4)
+        med_miss = max(0, total_medals - medal_stock)
+        with tm1:
+            st.metric(t("🏅 Medalhas total", "🏅 Total Medals"), f"{total_medals:,}",
+                      help=t(f"Estoque: {medal_stock:,}", f"Stock: {medal_stock:,}"))
+            if med_miss > 0:
+                st.error(t(f"❗ Faltam: {med_miss:,}", f"❗ Missing: {med_miss:,}"))
+            else:
+                st.success(t(f"✅ Saldo: {medal_stock - total_medals:,}", f"✅ Surplus: {medal_stock - total_medals:,}"))
+
+        for col, rar in zip([tm2, tm3, tm4], ["Legendary", "Epic", "Rare"]):
+            emoji = "🟡" if rar == "Legendary" else ("🟣" if rar == "Epic" else "🔵")
+            total_tok_rar = sum(e["tokens"] for e in plan if e["rarity"] == rar)
+            stock_rar = token_stock[rar]
+            tok_miss  = max(0, total_tok_rar - stock_rar)
+            with col:
+                st.metric(f"{emoji} {t('Tokens', 'Tokens')} {t(RAR_PT[rar], rar)}", f"{total_tok_rar}",
+                          help=t(f"Estoque: {stock_rar}", f"Stock: {stock_rar}"))
+                if total_tok_rar == 0:
+                    st.caption(t("Nenhuma skin desta raridade", "No skins of this rarity"))
+                elif tok_miss > 0:
+                    st.error(t(f"❗ Faltam: {tok_miss}", f"❗ Missing: {tok_miss}"))
+                else:
+                    st.success(t(f"✅ Saldo: {stock_rar - total_tok_rar}", f"✅ Surplus: {stock_rar - total_tok_rar}"))
+
+        st.caption(t(
+            "⚠️ Medalhas para Honor Level calculadas sem uso de tokens. "
+            "Ajuste no calculador individual para usar tokens em HLs.",
+            "⚠️ Honor Level medals calculated assuming no tokens used. "
+            "Adjust in the individual calculator to allocate tokens to HLs.",
+        ))
+
+        st.divider()
+        if st.button("🗑️ " + t("Limpar plano", "Clear plan"), key="sp_clear"):
+            st.session_state["skin_plan"] = []
+            st.rerun()

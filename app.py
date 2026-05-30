@@ -4,6 +4,7 @@ Run with:  streamlit run app.py
 """
 
 import streamlit as st
+from events_tracker import render_events_tracker
 
 st.set_page_config(
     page_title="Top Heroes Tools",
@@ -12,7 +13,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-# ── Global language selector (persists across pages via session_state) ─────────
+# ── Global language selector ───────────────────────────────────────────────────
 if "lang" not in st.session_state:
     st.session_state.lang = "pt"
 
@@ -47,66 +48,79 @@ with st.sidebar:
         st.rerun()
 
 lang = st.session_state.lang
+def t(pt, en): return pt if lang == "pt" else en
 
-# ── Home ───────────────────────────────────────────────────────────────────────
-st.title("🏆 Top Heroes" + (" — Ferramentas" if lang == "pt" else " — Tools"))
-st.markdown(
-    "Escolha uma ferramenta abaixo ou na barra lateral." if lang == "pt"
-    else "Choose a tool below or from the sidebar."
-)
-st.divider()
+# ── Title ──────────────────────────────────────────────────────────────────────
+st.title("🏆 Top Heroes" + t(" — Ferramentas", " — Tools"))
 
-col1, col2, col3, col4 = st.columns(4, gap="large")
+# ── Main tabs ──────────────────────────────────────────────────────────────────
+tab_tools, tab_events = st.tabs([
+    "🔧 " + t("Ferramentas", "Tools"),
+    "📅 " + t("Eventos Regulares", "Rush Events"),
+])
 
-with col1:
-    with st.container(border=True):
-        st.subheader("⚜️ " + ("Otimizador de Relíquias" if lang == "pt" else "Relic Optimizer"))
-        st.markdown(
-            "Calcula a rota ideal de **Miracle Hammer** para maximizar os níveis das relíquias com os fragmentos disponíveis."
-            if lang == "pt" else
-            "Calculates the optimal **Miracle Hammer** route to maximise relic levels with available shards."
-        )
-        st.page_link("pages/1_Reliquias.py",
-                     label="Abrir →" if lang == "pt" else "Open →")
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 1 — Ferramentas / Tools
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_tools:
+    st.markdown(
+        "Escolha uma ferramenta abaixo ou na barra lateral." if lang == "pt"
+        else "Choose a tool below or from the sidebar."
+    )
 
-with col2:
-    with st.container(border=True):
-        st.subheader("🏗️ " + ("Planejador DE & Pó" if lang == "pt" else "DE & Dust Planner"))
-        st.markdown(
-            "Planeja gastos de **Dragon Essence** e **Dragon Dust** nas construções Brilliance e pesquisas, com cadeia de pré-requisitos do Castelo."
-            if lang == "pt" else
-            "Plans **Dragon Essence** and **Dragon Dust** spending on Brilliance buildings and research, with Castle prerequisite chain."
-        )
-        st.page_link("pages/2_DE_Dust.py",
-                     label="Abrir →" if lang == "pt" else "Open →")
+    col1, col2, col3, col4 = st.columns(4, gap="large")
 
-with col3:
-    with st.container(border=True):
-        st.subheader("🐾 " + ("Calculadora de Pets" if lang == "pt" else "Pet Calculator"))
-        st.markdown(
-            "Calcula **comida, essência e cópias** necessárias para evoluir e promover seus pets até Epic, Legendary e Mythic."
-            if lang == "pt" else
-            "Calculates **food, essence and copies** needed to level up and promote pets to Epic, Legendary, and Mythic."
-        )
-        st.page_link("pages/3_Pets.py",
-                     label="Abrir →" if lang == "pt" else "Open →")
+    with col1:
+        with st.container(border=True):
+            st.subheader("⚜️ " + t("Otimizador de Relíquias", "Relic Optimizer"))
+            st.markdown(
+                "Calcula a rota ideal de **Miracle Hammer** para maximizar os níveis das relíquias com os fragmentos disponíveis."
+                if lang == "pt" else
+                "Calculates the optimal **Miracle Hammer** route to maximise relic levels with available shards."
+            )
+            st.page_link("pages/1_Reliquias.py",
+                         label="Abrir →" if lang == "pt" else "Open →")
 
-with col4:
-    with st.container(border=True):
-        st.subheader("🧢 " + ("Skins de Tropas" if lang == "pt" else "Troop Skins"))
-        st.markdown(
-            "Calcula **medalhas e tokens** necessários para subir o nível e as Honor Levels das skins de tropas."
-            if lang == "pt" else
-            "Calculates **medals and tokens** needed to level up troop skins and unlock Honor Levels."
-        )
-        st.page_link("pages/4_Troop_Skins.py",
-                     label="Abrir →" if lang == "pt" else "Open →")
+    with col2:
+        with st.container(border=True):
+            st.subheader("🏗️ " + t("Planejador DE & Pó", "DE & Dust Planner"))
+            st.markdown(
+                "Planeja gastos de **Dragon Essence** e **Dragon Dust** nas construções Brilliance e pesquisas, com cadeia de pré-requisitos do Castelo."
+                if lang == "pt" else
+                "Plans **Dragon Essence** and **Dragon Dust** spending on Brilliance buildings and research, with Castle prerequisite chain."
+            )
+            st.page_link("pages/2_DE_Dust.py",
+                         label="Abrir →" if lang == "pt" else "Open →")
 
-st.divider()
-st.subheader("🙏 " + ("Agradecimentos" if lang == "pt" else "Acknowledgements"))
-st.markdown(
-    """
+    with col3:
+        with st.container(border=True):
+            st.subheader("🐾 " + t("Calculadora de Pets", "Pet Calculator"))
+            st.markdown(
+                "Calcula **comida, essência e cópias** necessárias para evoluir e promover seus pets até Epic, Legendary e Mythic."
+                if lang == "pt" else
+                "Calculates **food, essence and copies** needed to level up and promote pets to Epic, Legendary, and Mythic."
+            )
+            st.page_link("pages/3_Pets.py",
+                         label="Abrir →" if lang == "pt" else "Open →")
+
+    with col4:
+        with st.container(border=True):
+            st.subheader("🧢 " + t("Skins de Tropas", "Troop Skins"))
+            st.markdown(
+                "Calcula **medalhas e tokens** necessários para subir o nível e as Honor Levels das skins de tropas."
+                if lang == "pt" else
+                "Calculates **medals and tokens** needed to level up troop skins and unlock Honor Levels."
+            )
+            st.page_link("pages/4_Troop_Skins.py",
+                         label="Abrir →" if lang == "pt" else "Open →")
+
+    st.divider()
+    st.subheader("🙏 " + t("Agradecimentos", "Acknowledgements"))
+    st.markdown(
+        """
 Todas as informações foram retiradas do **Discord oficial do Top Heroes**.
+
+**Kami** — pela ajuda desde o início
 
 **Top Heroes Table** — Hyena
 
@@ -114,9 +128,11 @@ Todas as informações foram retiradas do **Discord oficial do Top Heroes**.
 Planilha criada por **Mixtape** & **Barad**.
 Dados fornecidos por: Mixtape, RegVed, PG Brotha, Cookie, Shootz, Maaarcy, Nomlette, Convex, Huddy, Mystiic.
 """
-    if lang == "pt" else
-    """
+        if lang == "pt" else
+        """
 All information was sourced from the **official Top Heroes Discord**.
+
+**Kami** — for the help since the beginning
 
 **Top Heroes Table** — Hyena
 
@@ -124,4 +140,10 @@ All information was sourced from the **official Top Heroes Discord**.
 Spreadsheet created by **Mixtape** & **Barad**.
 Data provided by: Mixtape, RegVed, PG Brotha, Cookie, Shootz, Maaarcy, Nomlette, Convex, Huddy, Mystiic.
 """
-)
+    )
+
+# ══════════════════════════════════════════════════════════════════════════════
+# TAB 2 — Eventos Regulares / Rush Events
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_events:
+    render_events_tracker()
