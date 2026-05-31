@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import streamlit as st
 import pandas as pd
+from events_data import EVENTS, get_milestone_status
 
 st.set_page_config(page_title="Troop Skin Calculator", page_icon="🧢", layout="wide")
 
@@ -276,6 +277,48 @@ with tab_calc:
     col_s4.metric(t("🏅 Saldo de medalhas após alvo", "🏅 Medal Surplus After Target"), f"{med_surplus:,}")
     col_s5.metric(t("🎟️ Saldo de tokens após alvo",   "🎟️ Token Surplus After Target"), f"{tok_surplus}")
 
+    # ── Impacto nos Eventos Regulares ─────────────────────────────────────────
+    st.divider()
+    st.markdown("**📅 " + t("Impacto nos Eventos Regulares", "Regular Event Impact") + "**")
+
+    ev_gear  = next(e for e in EVENTS if e["sheet"] == "Lord_Gear_Trial")
+    ev_gname = ev_gear.get("name_pt", ev_gear["name"]) if lang == "pt" else ev_gear["name"]
+
+    _pts_per_tok = 30 if rarity == "Rare" else 300 if rarity == "Epic" else 3000
+    pts_med_c  = med_total / 200
+    pts_tok_c  = tok_total * _pts_per_tok
+    pts_gear_c = pts_med_c + pts_tok_c
+
+    egc1, egc2, egc3 = st.columns(3)
+    egc1.metric(t("🏅 Medalhas", "🏅 Medals"), f"{pts_med_c:,.1f} pts",
+                help=t(f"{med_total:,} medalhas ÷ 200", f"{med_total:,} medals ÷ 200"))
+    egc2.metric(f"🎟️ {t('Tokens', 'Tokens')} ({t(RAR_PT[rarity], rarity)})",
+                f"{pts_tok_c:,.0f} pts",
+                help=t(f"{tok_total} tokens × {_pts_per_tok}", f"{tok_total} tokens × {_pts_per_tok}"))
+    egc3.metric(f"📊 {ev_gname}", f"{pts_gear_c:,.1f} pts")
+
+    ms_icons_c = "  ".join(
+        f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+        for s in get_milestone_status(ev_gear["milestones"], pts_gear_c)
+    )
+    st.caption(f"Milestones: {ms_icons_c}")
+    st.caption(t(
+        "⚠️ Enviar sobrescreve qualquer envio anterior desta skin.",
+        "⚠️ Sending overwrites any previous single-skin send.",
+    ))
+
+    if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_skin_calc_evt"):
+        st.session_state["_pts_to_send_Lord_Gear_Trial"]    = int(pts_gear_c)
+        st.session_state["_calc_contrib_Lord_Gear_Trial_4"] = int((tok_total if rarity == "Rare"      else 0) * 30)
+        st.session_state["_calc_contrib_Lord_Gear_Trial_5"] = int((tok_total if rarity == "Epic"      else 0) * 300)
+        st.session_state["_calc_contrib_Lord_Gear_Trial_6"] = int((tok_total if rarity == "Legendary" else 0) * 3000)
+        st.session_state["_calc_contrib_Lord_Gear_Trial_7"] = int(pts_med_c)
+        st.session_state["_calc_sent_Lord_Gear_Trial"]      = True
+        st.success(t(
+            f"✅ {pts_gear_c:,.1f} pts enviados para **{ev_gname}**! Acesse Eventos Regulares para ver.",
+            f"✅ {pts_gear_c:,.1f} pts sent to **{ev_gname}**! Go to Regular Events to see them.",
+        ))
+
     st.divider()
     with st.expander(t(
         f"📊 Referência — Custo de medalhas por nível ({t(RAR_PT[rarity], rarity)})",
@@ -419,7 +462,53 @@ with tab_plan:
             "Adjust in the individual calculator to allocate tokens to HLs.",
         ))
 
+        # ── Impacto nos Eventos Regulares ─────────────────────────────────────
+        st.divider()
+        st.markdown("**📅 " + t("Impacto nos Eventos Regulares", "Regular Event Impact") + "**")
+
+        ev_gear_p  = next(e for e in EVENTS if e["sheet"] == "Lord_Gear_Trial")
+        ev_gpname  = ev_gear_p.get("name_pt", ev_gear_p["name"]) if lang == "pt" else ev_gear_p["name"]
+
+        tot_rar_tok = sum(e["tokens"] for e in plan if e["rarity"] == "Rare")
+        tot_epi_tok = sum(e["tokens"] for e in plan if e["rarity"] == "Epic")
+        tot_leg_tok = sum(e["tokens"] for e in plan if e["rarity"] == "Legendary")
+
+        pts_med_p  = total_medals / 200
+        pts_rar_p  = tot_rar_tok * 30
+        pts_epi_p  = tot_epi_tok * 300
+        pts_leg_p  = tot_leg_tok * 3000
+        pts_gear_p = pts_med_p + pts_rar_p + pts_epi_p + pts_leg_p
+
+        esg1, esg2, esg3, esg4, esg5 = st.columns(5)
+        esg1.metric(t("🏅 Medalhas", "🏅 Medals"),          f"{pts_med_p:,.1f} pts")
+        esg2.metric(f"🔵 {t('Tokens Raros', 'Rare Tokens')}", f"{pts_rar_p:,.0f} pts")
+        esg3.metric(f"🟣 {t('Tokens Épicos', 'Epic Tokens')}", f"{pts_epi_p:,.0f} pts")
+        esg4.metric(f"🟡 {t('Tokens Lend.', 'Leg. Tokens')}",  f"{pts_leg_p:,.0f} pts")
+        esg5.metric(f"📊 {ev_gpname}",                       f"{pts_gear_p:,.1f} pts")
+
+        ms_icons_p2 = "  ".join(
+            f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+            for s in get_milestone_status(ev_gear_p["milestones"], pts_gear_p)
+        )
+        st.caption(f"Milestones: {ms_icons_p2}")
+
+        if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_skin_plan_evt"):
+            st.session_state["_pts_to_send_Lord_Gear_Trial"]    = int(pts_gear_p)
+            st.session_state["_calc_contrib_Lord_Gear_Trial_4"] = int(pts_rar_p)
+            st.session_state["_calc_contrib_Lord_Gear_Trial_5"] = int(pts_epi_p)
+            st.session_state["_calc_contrib_Lord_Gear_Trial_6"] = int(pts_leg_p)
+            st.session_state["_calc_contrib_Lord_Gear_Trial_7"] = int(pts_med_p)
+            st.session_state["_calc_sent_Lord_Gear_Trial"]      = True
+            st.success(t(
+                f"✅ {pts_gear_p:,.1f} pts enviados para **{ev_gpname}**! Acesse Eventos Regulares para ver.",
+                f"✅ {pts_gear_p:,.1f} pts sent to **{ev_gpname}**! Go to Regular Events to see them.",
+            ))
+
         st.divider()
         if st.button("🗑️ " + t("Limpar plano", "Clear plan"), key="sp_clear"):
             st.session_state["skin_plan"] = []
+            st.session_state["_pts_to_send_Lord_Gear_Trial"] = 0
+            st.session_state["_calc_sent_Lord_Gear_Trial"]   = False
+            for _k in [4, 5, 6, 7]:
+                st.session_state.pop(f"_calc_contrib_Lord_Gear_Trial_{_k}", None)
             st.rerun()

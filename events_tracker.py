@@ -36,6 +36,12 @@ def _inject_css():
         font-weight: bold; font-size: 0.9em;
         display: inline-block;
     }
+    .calc-pill {
+        background: #4A7C59; color: white;
+        border-radius: 12px; padding: 1px 8px;
+        font-size: 0.82em;
+        display: inline-block;
+    }
     .section-header {
         background: #5C3D1E; color: white;
         border-radius: 6px; padding: 6px 14px;
@@ -91,6 +97,12 @@ def _render_milestones(milestones: list, grand_total: float, t):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _render_event_tab(ev: dict, t, lang: str = "pt"):
+    # One-shot delivery from calculators: move pending pts into the widget key
+    _delivery = f"_pts_to_send_{ev['sheet']}"
+    if _delivery in st.session_state:
+        st.session_state[f"cur_{ev['sheet']}"] = st.session_state[_delivery]
+        del st.session_state[_delivery]
+
     current_pts = st.number_input(
         t("Pontos atuais que você já tem:", "Current points you already have:"),
         min_value=0, value=0, step=100,
@@ -108,10 +120,19 @@ def _render_event_tab(ev: dict, t, lang: str = "pt"):
     st.markdown("---")
     st.markdown(f"#### {t('Tarefas — insira as quantidades abaixo', 'Tasks — enter raw quantities below')}")
 
+    _has_calc = st.session_state.get(f"_calc_sent_{ev['sheet']}", False)
+    if _has_calc:
+        st.info(t(
+            "🔗 Pontos atuais pré-preenchidos pelas calculadoras. "
+            "Use as tarefas para gastos adicionais não cobertos pelas ferramentas.",
+            "🔗 Current points pre-filled by the calculators. "
+            "Use the tasks for extra spending not covered by the tools.",
+        ))
+
     simulated_total = 0.0
 
     for i, task in enumerate(ev["tasks"]):
-        col_desc, col_pts, col_input, col_earned = st.columns([4, 1, 2, 2])
+        col_desc, col_pts, col_input, col_earned, col_calc = st.columns([4, 1, 2, 2, 2])
 
         with col_desc:
             desc = task.get("description_pt", task["description"]) if lang == "pt" else task["description"]
@@ -146,6 +167,14 @@ def _render_event_tab(ev: dict, t, lang: str = "pt"):
                 st.success(f"**{pts:,.0f} pts**")
             else:
                 st.markdown("—")
+
+        with col_calc:
+            _contrib = st.session_state.get(f"_calc_contrib_{ev['sheet']}_{i}", 0)
+            if _contrib > 0:
+                st.markdown(
+                    f'<span class="calc-pill">🔗 {_contrib:,.0f}</span>',
+                    unsafe_allow_html=True,
+                )
 
         simulated_total += pts
 

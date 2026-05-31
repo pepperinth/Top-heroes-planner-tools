@@ -12,6 +12,7 @@ from pet_engine import (
     MAX_LEVEL,
     calc_milestone, calc_to_target, max_level_with_food, get_stats,
 )
+from events_data import EVENTS, get_milestone_status
 
 st.set_page_config(page_title="Pet Calculator", page_icon="🐾", layout="wide")
 
@@ -52,7 +53,7 @@ st.caption(t(
 
 # ── RECURSOS (compartilhado entre abas) ───────────────────────────────────────
 st.subheader("📦 " + t("Recursos", "Resources"))
-rc1, rc2, rc3 = st.columns(3)
+rc1, rc2, rc3, rc4 = st.columns(4)
 with rc1:
     inv_food = st.number_input(t("🍗 Pet Food", "🍗 Pet Food"),
                                 min_value=0, value=0, step=1000, key="pet_food")
@@ -62,6 +63,15 @@ with rc2:
 with rc3:
     inv_box = st.number_input(t("🎁 Rare Pet Choice Box", "🎁 Rare Pet Choice Box"),
                                min_value=0, value=0, step=1, key="pet_box")
+with rc4:
+    inv_common = st.number_input(
+        t("🐾 Pets Comuns", "🐾 Common Pets"),
+        min_value=0, value=0, step=1, key="inv_common_pet",
+        help=t(
+            "Cópias de pets Comuns para usar como material de EXP.",
+            "Common pet copies to use as EXP material.",
+        ),
+    )
 
 # ── INVENTÁRIO DE PETS (compartilhado entre abas) ──────────────────────────────
 st.divider()
@@ -251,6 +261,60 @@ with tab_calc:
         s5.metric(t("HP% (Facção)",     "HP% (Faction)"),    hpf)
         st.caption(t(f"Level cap de habilidade: {lcap}", f"Skill level cap: {lcap}"))
 
+    # ── Impacto nos Eventos Regulares ─────────────────────────────────────────
+    st.markdown("---")
+    st.markdown("**📅 " + t("Impacto nos Eventos Regulares", "Regular Event Impact") + "**")
+
+    unreached = [(tier, label) for tier, label, rank in tier_cfgs if promo_rank < rank]
+    if not unreached:
+        st.info(t("✅ Todos os tiers já foram alcançados!", "✅ All tiers have already been reached!"))
+    else:
+        tier_opts   = [label for _, label in unreached]
+        sel_label   = st.selectbox(
+            t("Calcular impacto para o tier:", "Calculate impact for tier:"),
+            tier_opts, key="calc_evt_tier",
+        )
+        sel_tier = next(tier for tier, label in unreached if label == sel_label)
+
+        ms_g = calc_milestone(sel_tier, current_level, promo_min_lvl, current_promo_lbl, 0, 0, 0, 0)
+
+        ev_pet_c   = next(e for e in EVENTS if e["sheet"] == "Pet_Ranking")
+        ev_pcname  = ev_pet_c.get("name_pt", ev_pet_c["name"]) if lang == "pt" else ev_pet_c["name"]
+
+        pts_food_c   = ms_g["food"] * 0.3
+        pts_ess_c    = ms_g["essence"] * 15
+        tot_rare_c   = ms_g["same"] + ms_g["any"]
+        pts_rare_c   = tot_rare_c * 900
+        pts_common_c = inv_common * 150
+        pts_evt_c    = pts_food_c + pts_ess_c + pts_rare_c + pts_common_c
+
+        ec1, ec2, ec3, ec4, ec5 = st.columns(5)
+        ec1.metric(t("🍗 Comida", "🍗 Food"),          f"{pts_food_c:,.0f} pts")
+        ec2.metric(t("💎 Essência", "💎 Essence"),      f"{pts_ess_c:,.0f} pts")
+        ec3.metric(t("🐾 Raros", "🐾 Rare"),            f"{pts_rare_c:,.0f} pts",
+                   help=t(f"{tot_rare_c} cópias × 900", f"{tot_rare_c} copies × 900"))
+        ec4.metric(t("🐾 Comuns", "🐾 Common"),         f"{pts_common_c:,.0f} pts",
+                   help=t(f"{inv_common} pets × 150", f"{inv_common} pets × 150"))
+        ec5.metric(f"📊 {ev_pcname}",                   f"{pts_evt_c:,.0f} pts")
+
+        ms_icons_c2 = "  ".join(
+            f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+            for s in get_milestone_status(ev_pet_c["milestones"], pts_evt_c)
+        )
+        st.caption(f"Milestones: {ms_icons_c2}")
+
+        if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_pet_calc_evt"):
+            st.session_state["_pts_to_send_Pet_Ranking"]    = int(pts_evt_c)
+            st.session_state["_calc_contrib_Pet_Ranking_1"] = int(ms_g["essence"] * 15)
+            st.session_state["_calc_contrib_Pet_Ranking_2"] = int(ms_g["food"] * 0.3)
+            st.session_state["_calc_contrib_Pet_Ranking_3"] = int(inv_common * 150)
+            st.session_state["_calc_contrib_Pet_Ranking_4"] = int(tot_rare_c * 900)
+            st.session_state["_calc_sent_Pet_Ranking"]      = True
+            st.success(t(
+                f"✅ {pts_evt_c:,.0f} pts enviados para **{ev_pcname}**! Acesse Eventos Regulares para ver.",
+                f"✅ {pts_evt_c:,.0f} pts sent to **{ev_pcname}**! Go to Regular Events to see them.",
+            ))
+
 # ══════════════════════════════════════════════════════════════════════════════
 # ABA 2 — PLANEJADOR DE LOTE
 # ══════════════════════════════════════════════════════════════════════════════
@@ -374,7 +438,52 @@ with tab_plan:
                 })
             st.dataframe(pd.DataFrame(copy_rows), use_container_width=True, hide_index=True)
 
+        # ── Impacto nos Eventos Regulares ─────────────────────────────────────
+        st.divider()
+        st.markdown("**📅 " + t("Impacto nos Eventos Regulares", "Regular Event Impact") + "**")
+
+        ev_pet   = next(e for e in EVENTS if e["sheet"] == "Pet_Ranking")
+        ev_pname = ev_pet.get("name_pt", ev_pet["name"]) if lang == "pt" else ev_pet["name"]
+
+        pts_food_e   = total_food * 0.3
+        pts_ess_e    = total_ess * 15
+        tot_rare_e   = sum(e["same"] + e["any"] for e in plan)
+        pts_rare_e   = tot_rare_e * 900
+        pts_common_e = inv_common * 150
+        pts_evt      = pts_food_e + pts_ess_e + pts_rare_e + pts_common_e
+
+        ea1, ea2, ea3, ea4, ea5 = st.columns(5)
+        ea1.metric(t("🍗 Comida", "🍗 Food"),           f"{pts_food_e:,.0f} pts")
+        ea2.metric(t("💎 Essência", "💎 Essence"),       f"{pts_ess_e:,.0f} pts")
+        ea3.metric(t("🐾 Raros", "🐾 Rare"),             f"{pts_rare_e:,.0f} pts",
+                   help=t(f"{tot_rare_e} cópias × 900", f"{tot_rare_e} copies × 900"))
+        ea4.metric(t("🐾 Comuns", "🐾 Common"),          f"{pts_common_e:,.0f} pts",
+                   help=t(f"{inv_common} pets × 150", f"{inv_common} pets × 150"))
+        ea5.metric(f"📊 {ev_pname}",                    f"{pts_evt:,.0f} pts")
+
+        ms_icons_p = "  ".join(
+            f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+            for s in get_milestone_status(ev_pet["milestones"], pts_evt)
+        )
+        st.caption(f"Milestones: {ms_icons_p}")
+
+        if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_pet_evt"):
+            st.session_state["_pts_to_send_Pet_Ranking"]    = int(pts_evt)
+            st.session_state["_calc_contrib_Pet_Ranking_1"] = int(total_ess * 15)
+            st.session_state["_calc_contrib_Pet_Ranking_2"] = int(total_food * 0.3)
+            st.session_state["_calc_contrib_Pet_Ranking_3"] = int(inv_common * 150)
+            st.session_state["_calc_contrib_Pet_Ranking_4"] = int(tot_rare_e * 900)
+            st.session_state["_calc_sent_Pet_Ranking"]      = True
+            st.success(t(
+                f"✅ {pts_evt:,.0f} pts enviados para **{ev_pname}**! Acesse Eventos Regulares para ver.",
+                f"✅ {pts_evt:,.0f} pts sent to **{ev_pname}**! Go to Regular Events to see them.",
+            ))
+
         st.divider()
         if st.button("🗑️ " + t("Limpar plano", "Clear plan"), key="bp_clear"):
             st.session_state["pet_plan"] = []
+            st.session_state["_pts_to_send_Pet_Ranking"] = 0
+            st.session_state["_calc_sent_Pet_Ranking"]   = False
+            for _k in range(5):
+                st.session_state.pop(f"_calc_contrib_Pet_Ranking_{_k}", None)
             st.rerun()
