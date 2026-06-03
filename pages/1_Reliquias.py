@@ -10,7 +10,7 @@ import pandas as pd
 from behemoth_engine import STAR_IMAGES, show_star_image
 from relic_optimizer import (
     ALL_RELICS, UNIVERSAL_RELICS, ALL_SET_RELICS, SETS,
-    STAR_OPTIONS, PREFERRED_INTER,
+    STAR_OPTIONS, PREFERRED_INTER, RELIC_NAME_PT,
     star_leg_to_idx, idx_to_star_leg,
     compute_route, shards_needed,
 )
@@ -37,6 +37,13 @@ def t(pt, en): return pt if lang == "pt" else en
 
 _BASE      = os.path.dirname(os.path.dirname(__file__))
 _TIER_BASE = {"Y": 0, "R": 25, "P": 50, "B": 75}
+_RELIC_TO_EN = {v: k for k, v in RELIC_NAME_PT.items()}
+
+def _rn(relic: str) -> str:
+    return RELIC_NAME_PT.get(relic, relic) if lang == "pt" else relic
+
+def _rn_en(display: str) -> str:
+    return _RELIC_TO_EN.get(display, display)
 
 def _relic_star_idx(star_str: str, leg_str: str) -> int:
     """Convert 'Y★3' + '2/5' → STAR_IMAGES index.
@@ -56,7 +63,7 @@ def _show_relic_star(star_str: str, leg_str: str):
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.title("⚜️ " + t("Otimizador de Relíquias", "Relic Optimizer"))
-st.caption(t("Calcula a rota de Miracle Hammer para maximizar os níveis das relíquias.",
+st.caption(t("Calcula a rota de Martelo Milagroso para maximizar os níveis das relíquias.",
              "Calculates the Miracle Hammer route to maximise relic levels."))
 
 LEG_OPTIONS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
@@ -85,30 +92,35 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
             tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0)
             _show_relic_star(tgt_star, tgt_leg)
         with c3:
-            hammers  = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1)
+            hammers  = st.number_input(t("Martelos Milagrosos", "Miracle Hammers"), min_value=1, max_value=30, value=1)
             univ     = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10)
         with c4:
-            inter1 = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), UNIVERSAL_RELICS, index=0)
-            inter2 = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + UNIVERSAL_RELICS, index=0)
-            inter2_val = inter2 if inter2 != "—" else ""
+            _univ_disp = [_rn(r) for r in UNIVERSAL_RELICS]
+            inter1_d = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), _univ_disp, index=0)
+            inter2_d = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + _univ_disp, index=0)
+            inter1     = _rn_en(inter1_d)
+            inter2_val = _rn_en(inter2_d) if inter2_d != "—" else ""
 
         set_relics = SETS[target_set]
         st.markdown(t("**Prioridade dentro do conjunto:**", "**Priority within set:**"))
+        _set_disp = [_rn(r) for r in set_relics]
         pcols = st.columns(len(set_relics))
         priority = []
-        for i, (col, rel) in enumerate(zip(pcols, set_relics)):
+        for i, col in enumerate(pcols):
             with col:
-                picked = st.selectbox(f"#{i+1}", set_relics, index=i, key=f"prio_{i}")
-                priority.append(picked)
+                picked_d = st.selectbox(f"#{i+1}", _set_disp, index=i, key=f"prio_{i}")
+                priority.append(_rn_en(picked_d))
 
     else:  # single relic mode
         s1, s2, s3, s4 = st.columns(4)
         with s1:
-            single_relic = st.selectbox(
+            _all_disp = [_rn(r) for r in ALL_RELICS]
+            single_relic_d = st.selectbox(
                 t("Relíquia alvo", "Target relic"),
-                ALL_RELICS,
+                _all_disp,
                 key="single_relic_sel",
             )
+            single_relic = _rn_en(single_relic_d)
             relic_kind = t("Universal", "Universal") if single_relic in UNIVERSAL_RELICS else t("Set", "Set")
             st.caption(relic_kind)
         with s2:
@@ -116,12 +128,14 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
             tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0, key="sr_tgt_leg")
             _show_relic_star(tgt_star, tgt_leg)
         with s3:
-            hammers = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1, key="sr_hammers")
+            hammers = st.number_input(t("Martelos Milagrosos", "Miracle Hammers"), min_value=1, max_value=30, value=1, key="sr_hammers")
             univ    = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10, key="sr_univ")
         with s4:
-            inter1 = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), UNIVERSAL_RELICS, index=0, key="sr_inter1")
-            inter2 = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + UNIVERSAL_RELICS, index=0, key="sr_inter2")
-            inter2_val = inter2 if inter2 != "—" else ""
+            _univ_disp_sr = [_rn(r) for r in UNIVERSAL_RELICS]
+            inter1_sr = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), _univ_disp_sr, index=0, key="sr_inter1")
+            inter2_sr = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + _univ_disp_sr, index=0, key="sr_inter2")
+            inter1     = _rn_en(inter1_sr)
+            inter2_val = _rn_en(inter2_sr) if inter2_sr != "—" else ""
         target_set = ""
         priority   = []
 
@@ -135,7 +149,7 @@ inv_rows = []
 for relic in ALL_RELICS:
     kind = t("Universal", "Universal") if relic in UNIVERSAL_RELICS else t("Set", "Set")
     inv_rows.append({
-        t("Relíquia", "Relic"):          relic,
+        t("Relíquia", "Relic"):          _rn(relic),
         t("Tipo", "Type"):               kind,
         t("Estrela", "Star"):            "0★",
         t("Leg", "Leg"):                 "—",
@@ -165,7 +179,7 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
     # Build inv dict from edited table
     relics_dict = {}
     for _, row in edited.iterrows():
-        name    = row[t("Relíquia", "Relic")]
+        name    = _rn_en(row[t("Relíquia", "Relic")])
         star    = row[t("Estrela", "Star")]
         leg_raw = row[t("Leg", "Leg")]
         leg     = leg_raw if leg_raw != "—" else "1/5"
@@ -216,7 +230,7 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
             reached = final >= target_level
             missing = shards_needed(final, target_level) if not reached else 0
             res_rows.append({
-                t("Relíquia", "Relic"):    tgt,
+                t("Relíquia", "Relic"):    _rn(tgt),
                 t("Antes", "Before"):      f"{os_} {ol}",
                 t("Depois", "After"):      f"{fs} {fl}",
                 t("Meta", "Goal"):         "✅" if reached else f"❌ (-{missing:,} frags)",
@@ -226,7 +240,7 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
 
         # Metrics
         m1, m2, m3 = st.columns(3)
-        m1.metric(t("Hammers usados", "Hammers used"),
+        m1.metric(t("Martelos usados", "Hammers used"),
                   f"{route['hammers_used']} / {hammers}")
         m2.metric(t("Fragmentos universais usados", "Universal shards used"),
                   f"{route['universal_used']:,} / {univ:,}")
@@ -239,7 +253,7 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
                           "**Mandatory relay assignment:**"))
             for t_idx, mname in sorted(route["assignment"].items()):
                 if t_idx < len(route["targets"]):
-                    st.markdown(f"- **{mname}** → {route['targets'][t_idx]}")
+                    st.markdown(f"- **{_rn(mname)}** → {_rn(route['targets'][t_idx])}")
 
         if route.get("suboptimal_note"):
             st.warning(route["suboptimal_note"])
@@ -254,9 +268,9 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
                     b_s, b_l = idx_to_star_leg(step["b_to"])
                     step_rows.append({
                         "#":                    "🔨",
-                        t("Ação", "Action"):     "Miracle Hammer SWAP",
-                        t("Relíquia A", "Relic A"): f"{step['relic_a']} ({a_s} {a_l})",
-                        t("Relíquia B", "Relic B"): f"{step['relic_b']} ({b_s} {b_l})",
+                        t("Ação", "Action"):     t("Martelo Milagroso (SWAP)", "Miracle Hammer SWAP"),
+                        t("Relíquia A", "Relic A"): f"{_rn(step['relic_a'])} ({a_s} {a_l})",
+                        t("Relíquia B", "Relic B"): f"{_rn(step['relic_b'])} ({b_s} {b_l})",
                         t("Frag. esp.", "Sp. shards"): "—",
                         t("Frag. univ.", "Univ. shards"): "—",
                     })
@@ -266,8 +280,8 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
                     t_s, t_l = idx_to_star_leg(step["to"])
                     step_rows.append({
                         "#":                    step_num,
-                        t("Ação", "Action"):     f"Develop → {t_s} {t_l}",
-                        t("Relíquia A", "Relic A"): step["relic"],
+                        t("Ação", "Action"):     f"{t('Desenvolver','Develop')} → {t_s} {t_l}",
+                        t("Relíquia A", "Relic A"): _rn(step["relic"]),
                         t("Relíquia B", "Relic B"): f"{f_s} {f_l} → {t_s} {t_l}",
                         t("Frag. esp.", "Sp. shards"): step["sp_used"] or "—",
                         t("Frag. univ.", "Univ. shards"): step["u_used"] or "—",

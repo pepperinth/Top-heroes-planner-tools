@@ -96,6 +96,32 @@ SETS = {
 ALL_SET_RELICS = [r for relics in SETS.values() for r in relics]
 ALL_RELICS     = UNIVERSAL_RELICS + ALL_SET_RELICS
 
+RELIC_NAME_PT = {
+    # Universais
+    "Duke's Signet Ring":   "Anel Sinete do Duque",
+    "Eternal Wings":        "Asas Eternas",
+    "Frost Diadem":         "Diadema de Gelo",
+    "Royalty":              "Realeza",
+    "War Flag":             "Bandeira de Guerra",
+    "Scale of Injustice":   "Balança da Injustiça",
+    "Mighty Gold":          "Ouro Poderoso",
+    "Persecution":          "Perseguição",
+    "Anti-Magic Handcuffs": "Algemas Anti-Magia",
+    "Moonstone":            "Pedra da Lua",
+    # Set — Liga
+    "Petrification Staff":  "Cajado de Petrificação",
+    "Soul Guard Orb":       "Orbe Guardião da Alma",
+    "Feather of the Pact":  "Pena do Pacto",
+    # Set — Horda
+    "Thunder Judgment":     "Julgamento do Trovão",
+    "Dragonheart":          "Coração de Dragão",
+    "Dragonbone Amulet":    "Amuleto de Osso de Dragão",
+    # Set — Natureza
+    "Vineborne Bow":        "Arco da Videira",
+    "Undefeated Crown":     "Coroa Invicta",
+    "Sacred Scroll":        "Pergaminho Sagrado",
+}
+
 
 # ── Read inventory ─────────────────────────────────────────────────────────────
 def read_inventory(filepath: str) -> dict:
