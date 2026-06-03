@@ -88,8 +88,8 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
             hammers  = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1)
             univ     = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10)
         with c4:
-            inter1 = st.selectbox("Relay 1 (obrigatório / mandatory)", UNIVERSAL_RELICS, index=0)
-            inter2 = st.selectbox("Relay 2 (obrigatório / mandatory)", ["—"] + UNIVERSAL_RELICS, index=0)
+            inter1 = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), UNIVERSAL_RELICS, index=0)
+            inter2 = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + UNIVERSAL_RELICS, index=0)
             inter2_val = inter2 if inter2 != "—" else ""
 
         set_relics = SETS[target_set]
@@ -119,8 +119,8 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
             hammers = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1, key="sr_hammers")
             univ    = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10, key="sr_univ")
         with s4:
-            inter1 = st.selectbox("Relay 1 (obrigatório / mandatory)", UNIVERSAL_RELICS, index=0, key="sr_inter1")
-            inter2 = st.selectbox("Relay 2 (obrigatório / mandatory)", ["—"] + UNIVERSAL_RELICS, index=0, key="sr_inter2")
+            inter1 = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), UNIVERSAL_RELICS, index=0, key="sr_inter1")
+            inter2 = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + UNIVERSAL_RELICS, index=0, key="sr_inter2")
             inter2_val = inter2 if inter2 != "—" else ""
         target_set = ""
         priority   = []

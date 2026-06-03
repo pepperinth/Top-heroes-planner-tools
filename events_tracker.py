@@ -220,8 +220,9 @@ def render_events_tracker():
 
     for tab, ev in zip(tabs, EVENTS):
         with tab:
+            ev_name = ev.get("name_pt", ev["name"]) if lang == "pt" else ev["name"]
             st.markdown(
-                f'<div class="section-header">{ev["name"]}</div>',
+                f'<div class="section-header">{ev_name}</div>',
                 unsafe_allow_html=True,
             )
             _render_event_tab(ev, t, lang)
