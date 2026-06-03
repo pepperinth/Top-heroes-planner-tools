@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 pet_engine.py — Pet Calculator data and calculation engine.
 """

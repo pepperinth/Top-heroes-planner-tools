@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 de_dust_engine.py
 Pure-logic layer for the DE & Dust Planner.

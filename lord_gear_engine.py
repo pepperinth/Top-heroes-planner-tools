@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 lord_gear_engine.py
 ===================
