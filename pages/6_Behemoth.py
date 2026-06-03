@@ -10,7 +10,7 @@ from PIL import Image
 import pandas as pd
 from behemoth_engine import (
     MAGICITE_PER_LEVEL, MAGIC_CORE_AT_LEVEL, STAR_SEAL_COSTS,
-    MAX_LEVEL, MAX_STARS,
+    MAX_LEVEL, MAX_STARS, MAX_STARS_CALC,
     BEHEMOTHS, BEHEMOTH_NAMES, FACTION_ICONS, FACTION_ICON_DIR,
     get_behemoth, show_star_image,
     calc_level_resources, calc_star_resources, calc_total,
@@ -60,7 +60,7 @@ def _star_label(star: int) -> str:
     prefix    = f"{star} — ⭐ {vis} {tier}"
     return f"{prefix} {done}" if leg == 5 else f"{prefix} · {leg}/5 {legs_word}"
 
-_STAR_OPTS = [_star_label(s) for s in range(MAX_STARS + 1)]
+_STAR_OPTS = [_star_label(s) for s in range(MAX_STARS_CALC + 1)]
 
 def _show_star_img(star: int):
     show_star_image(star, _BASE, st)
@@ -156,7 +156,7 @@ with tab_calc:
         )
         tgt_star_sel = st.selectbox(
             t("Estrelas alvo", "Target stars"),
-            _STAR_OPTS, index=MAX_STARS, key="calc_tgt_star_sel",
+            _STAR_OPTS, index=MAX_STARS_CALC, key="calc_tgt_star_sel",
         )
         tgt_star = _STAR_OPTS.index(tgt_star_sel)
         _show_star_img(tgt_star)
@@ -343,7 +343,7 @@ with tab_plan:
             p_tgt_lvl = st.number_input(t("Nível alvo","Target level"),
                 min_value=1, max_value=MAX_LEVEL, value=MAX_LEVEL, step=1, key="plan_tgt_lvl")
             p_tgt_star_sel = st.selectbox(t("Estrelas alvo","Target stars"),
-                _STAR_OPTS, index=MAX_STARS, key="plan_tgt_star_sel")
+                _STAR_OPTS, index=MAX_STARS_CALC, key="plan_tgt_star_sel")
             p_tgt_star = _STAR_OPTS.index(p_tgt_star_sel)
 
     plan_errors = []

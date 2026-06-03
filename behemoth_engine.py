@@ -272,6 +272,7 @@ STAR_IMAGES: list[str] = [
 ]
 
 MAX_STARS      = 75   # Behemoth progression cap (gold 1-25, red 26-50, platinum 51-75)
+MAX_STARS_CALC = len(STAR_SEAL_COSTS)  # 50 — cost data ends at red tier
 STAR_IMAGE_DIR = "behemoth_imgs"
 _STAR_DISPLAY_H = 48  # fixed display height — each star appears the same individual size
 
