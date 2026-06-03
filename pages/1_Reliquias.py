@@ -76,10 +76,10 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
     if not single_mode:
         c1, c2, c3, c4 = st.columns(4)
         with c1:
-            target_set = st.selectbox(
-                t("Conjunto alvo", "Target set"),
-                list(SETS.keys()), index=0,
-            )
+            _SET_PT = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza"}
+            _set_opts = [t(_SET_PT[k], k) for k in SETS.keys()]
+            _set_disp = st.selectbox(t("Conjunto alvo", "Target set"), _set_opts, index=0)
+            target_set = {"Liga": "League", "Horda": "Horde", "Natureza": "Nature"}.get(_set_disp, _set_disp)
         with c2:
             tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0)
             tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0)

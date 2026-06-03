@@ -398,7 +398,8 @@ def _rrow(item, key, locked=False):
     if f"{key}_t" not in st.session_state:
         st.session_state[f"{key}_t"] = "0" if locked else str(mx)
     c1, c2, c3, c4, c5 = st.columns([3, 1, 1, 1, 2])
-    c1.markdown(f"{'🔒 ' if locked else ''}{item['name']} *(0–{mx})*")
+    _rname = item.get("name_pt", item["name"]) if lang == "pt" else item["name"]
+    c1.markdown(f"{'🔒 ' if locked else ''}{_rname} *(0–{mx})*")
     from_sel = c2.selectbox(
         "f", opts,
         key=f"{key}_f", label_visibility="collapsed", disabled=locked,
