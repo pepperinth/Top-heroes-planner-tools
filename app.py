@@ -68,7 +68,8 @@ with tab_tools:
         else "Choose a tool below or from the sidebar."
     )
 
-    col1, col2, col3, col4 = st.columns(4, gap="large")
+    col1, col2, col3 = st.columns(3, gap="large")
+    col4, col5, col6 = st.columns(3, gap="large")
 
     with col1:
         with st.container(border=True):
@@ -112,6 +113,28 @@ with tab_tools:
                 "Calculates **medals and tokens** needed to level up troop skins and unlock Honor Levels."
             )
             st.page_link("pages/4_Troop_Skins.py",
+                         label="Abrir →" if lang == "pt" else "Open →")
+
+    with col5:
+        with st.container(border=True):
+            st.subheader("🦕 " + t("Behemoth", "Behemoth"))
+            st.markdown(
+                "Calcula **Magicite, Núcleos Mágicos e Selos** necessários para evoluir os níveis e estrelas do Behemoth."
+                if lang == "pt" else
+                "Calculates **Magicite, Magic Cores and Seals** needed to upgrade Behemoth levels and stars."
+            )
+            st.page_link("pages/6_Behemoth.py",
+                         label="Abrir →" if lang == "pt" else "Open →")
+
+    with col6:
+        with st.container(border=True):
+            st.subheader("⚙️ " + t("Lord Gear & Sacred Codex", "Lord Gear & Sacred Codex"))
+            st.markdown(
+                "Calcula **Metal Refinado, Fio Mágico, Oricalco e Sangue de Dragão** para evoluir peças do Lord Gear e o Sacred Codex."
+                if lang == "pt" else
+                "Calculates **Refined Metal, Magic Thread, Orichalcum and Dragon Blood** to upgrade Lord Gear pieces and the Sacred Codex."
+            )
+            st.page_link("pages/7_LordGear.py",
                          label="Abrir →" if lang == "pt" else "Open →")
 
     st.divider()

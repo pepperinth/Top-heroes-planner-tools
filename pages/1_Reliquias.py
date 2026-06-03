@@ -7,6 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import streamlit as st
 import pandas as pd
+from behemoth_engine import STAR_IMAGES, show_star_image
 from relic_optimizer import (
     ALL_RELICS, UNIVERSAL_RELICS, ALL_SET_RELICS, SETS,
     STAR_OPTIONS, PREFERRED_INTER,
@@ -34,6 +35,25 @@ with st.sidebar:
 lang = st.session_state.lang
 def t(pt, en): return pt if lang == "pt" else en
 
+_BASE      = os.path.dirname(os.path.dirname(__file__))
+_TIER_BASE = {"Y": 0, "R": 25, "P": 50, "B": 75}
+
+def _relic_star_idx(star_str: str, leg_str: str) -> int:
+    """Convert 'Y★3' + '2/5' → STAR_IMAGES index.
+    Tiers: Y=Gold(0-25), R=Red(26-50), P=Platinum(51-75), B=Black(76-80 complete only).
+    """
+    if star_str == "0★":
+        return 0
+    prefix = star_str[0]
+    n      = int(star_str.split("★")[1])
+    base   = _TIER_BASE.get(prefix, 0)
+    if prefix == "B":
+        return base + n
+    return base + (n - 1) * 5 + int(leg_str.split("/")[0])
+
+def _show_relic_star(star_str: str, leg_str: str):
+    show_star_image(_relic_star_idx(star_str, leg_str), _BASE, st)
+
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.title("⚜️ " + t("Otimizador de Relíquias", "Relic Optimizer"))
 st.caption(t("Calcula a rota de Miracle Hammer para maximizar os níveis das relíquias.",
@@ -52,6 +72,7 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
     with c2:
         tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0)
         tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0)
+        _show_relic_star(tgt_star, tgt_leg)
     with c3:
         hammers  = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1)
         univ     = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10)
@@ -84,7 +105,7 @@ for relic in ALL_RELICS:
         t("Estrela", "Star"):            "0★",
         t("Leg", "Leg"):                 "—",
         t("Frag. específicos", "Spec. shards"): 0,
-        t("Usar?", "Use?"):              relic in UNIVERSAL_RELICS,
+        t("Usar?", "Use?"):              True,
     })
 
 df_inv = pd.DataFrame(inv_rows)
@@ -113,7 +134,8 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
         star    = row[t("Estrela", "Star")]
         leg_raw = row[t("Leg", "Leg")]
         leg     = leg_raw if leg_raw != "—" else "1/5"
-        spec    = int(row[t("Frag. específicos", "Spec. shards")])
+        _spec_raw = row[t("Frag. específicos", "Spec. shards")]
+        spec    = int(_spec_raw) if _spec_raw == _spec_raw else 0  # NaN guard
         can_use = bool(row[t("Usar?", "Use?")])
         relics_dict[name] = {
             "star_idx":        star_leg_to_idx(star, leg),
@@ -122,13 +144,17 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
         }
 
     target_level = star_leg_to_idx(tgt_star, tgt_leg)
+    # Exclude relics the user unchecked ("Usar?" = False) or removed from the table
+    priority_active = [p for p in priority
+                       if relics_dict.get(p, {}).get("can_use", True)]
+
     inv = {
         "universal_shards": univ,
         "relics": relics_dict,
         "config": {
             "target_set":    target_set,
             "target_relic":  "",
-            "priority":      priority,
+            "priority":      priority_active,
             "inter1":        inter1,
             "inter2":        inter2_val,
             "target_level":  target_level,

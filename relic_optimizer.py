@@ -397,6 +397,7 @@ def compute_route(inv: dict) -> dict:
 
     levels_init    = {r: inv["relics"].get(r, {}).get("star_idx",        0) for r in ALL_RELICS}
     specific_init  = {r: inv["relics"].get(r, {}).get("specific_shards", 0) for r in ALL_RELICS}
+    can_use_init   = {r: inv["relics"].get(r, {}).get("can_use", True)      for r in ALL_RELICS}
     universal_init = inv["universal_shards"]
 
     # Mandatory relay names from user config
@@ -430,10 +431,13 @@ def compute_route(inv: dict) -> dict:
     def seed_score(r):
         return levels_init.get(r, 0) * 10 - specific_init.get(r, 0)
 
-    seed_pool  = sorted([r for r in UNIVERSAL_RELICS if r not in targets],
+    seed_pool  = sorted([r for r in UNIVERSAL_RELICS
+                         if r not in targets and can_use_init.get(r, True)],
                         key=seed_score, reverse=True)
     relay_pool = [r for r in UNIVERSAL_RELICS
-                  if specific_init.get(r, 0) > 0 and r not in targets]
+                  if specific_init.get(r, 0) > 0
+                  and r not in targets
+                  and can_use_init.get(r, True)]
 
     # User's explicit assignment: inter1 → target[0], inter2 → target[1]
     user_assignment = {i: mandatory_names[i]

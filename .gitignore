@@ -5,3 +5,6 @@ __pycache__/
 *.md
 build_*.py
 .streamlit/secrets.toml
+.env
+faction_check_*/
+relic_check/
