@@ -109,16 +109,20 @@ def _render_event_impact(rm: int, mt: int, ori: int, db: int, send_key: str):
 
     ec1, ec2, ec3, ec4 = st.columns(4)
     with ec1:
-        st.metric("🔩 " + t("Metal Refinado", "Refined Metal"),
+        show_resource_image("rm", _BASE, st)
+        st.metric(t("Metal Refinado", "Refined Metal"),
                   f"{pts['rm']:,.0f} pts", f"×0.1/u · {rm:,}")
     with ec2:
-        st.metric("🧵 " + t("Fio Mágico", "Magic Thread"),
+        show_resource_image("mt", _BASE, st)
+        st.metric(t("Fio Mágico", "Magic Thread"),
                   f"{pts['mt']:,.0f} pts", f"×10/u · {mt:,}")
     with ec3:
-        st.metric("⛏️ Oricalco / Orichalcum",
+        show_resource_image("ori", _BASE, st)
+        st.metric("Oricalco / Orichalcum",
                   f"{pts['ori']:,.0f} pts", f"×15/u · {ori:,}")
     with ec4:
-        st.metric("🩸 " + t("Sangue de Dragão", "Dragon Blood"),
+        show_resource_image("db", _BASE, st)
+        st.metric(t("Sangue de Dragão", "Dragon Blood"),
                   f"{pts['db']:,.0f} pts", f"×60/u · {db:,}")
 
     st.markdown(f"**{t('Total estimado','Estimated total')}: {total:,.0f} pts**")
@@ -171,7 +175,7 @@ with tab_calc:
         )
 
         st.markdown("")
-        show_codex_image(_BASE, st, height=36)
+        show_codex_image(_BASE, st, height=22)
         cur_codex = st.number_input(
             t("Estrelas atuais do Sacred Codex", "Current Sacred Codex stars"),
             min_value=0, max_value=MAX_CODEX_STARS, value=0, step=1,
@@ -190,7 +194,7 @@ with tab_calc:
         )
 
         st.markdown("")
-        show_codex_image(_BASE, st, height=36)
+        show_codex_image(_BASE, st, height=22)
         tgt_codex = st.number_input(
             t("Estrelas alvo do Sacred Codex", "Target Sacred Codex stars"),
             min_value=0, max_value=MAX_CODEX_STARS, value=MAX_CODEX_STARS, step=1,
@@ -251,16 +255,20 @@ with tab_calc:
             # Total combined metrics
             mc1, mc2, mc3, mc4 = st.columns(4)
             with mc1:
-                _render_metric_net("🔩 " + t("Metal Refinado necessário", "Refined Metal needed"),
+                show_resource_image("rm", _BASE, st)
+                _render_metric_net(t("Metal Refinado necessário", "Refined Metal needed"),
                                    res["rm"], inv_rm)
             with mc2:
-                _render_metric_net("🧵 " + t("Fio Mágico necessário", "Magic Thread needed"),
+                show_resource_image("mt", _BASE, st)
+                _render_metric_net(t("Fio Mágico necessário", "Magic Thread needed"),
                                    res["mt"], inv_mt)
             with mc3:
-                _render_metric_net("⛏️ " + t("Oricalco necessário", "Orichalcum needed"),
+                show_resource_image("ori", _BASE, st)
+                _render_metric_net(t("Oricalco necessário", "Orichalcum needed"),
                                    res["ori"], inv_ori)
             with mc4:
-                _render_metric_net("🩸 " + t("Sangue de Dragão necessário", "Dragon Blood needed"),
+                show_resource_image("db", _BASE, st)
+                _render_metric_net(t("Sangue de Dragão necessário", "Dragon Blood needed"),
                                    res["db"], inv_db)
 
             # Breakdown if both components are non-zero
@@ -269,10 +277,31 @@ with tab_calc:
                     dc1, dc2 = st.columns(2)
                     with dc1:
                         st.markdown(f"**⚙️ Lord Gear** ({_level_name(cur_gear)} → {_level_name(tgt_gear)})")
-                        st.markdown(f"- 🔩 {g_res['rm']:,} RM · 🧵 {g_res['mt']:,} MT · ⛏️ {g_res['ori']:,} Ori · 🩸 {g_res['db']:,} DB")
+                        bk1, bk2, bk3, bk4 = st.columns(4)
+                        with bk1:
+                            show_resource_image("rm", _BASE, st)
+                            st.caption(f"{g_res['rm']:,}")
+                        with bk2:
+                            show_resource_image("mt", _BASE, st)
+                            st.caption(f"{g_res['mt']:,}")
+                        with bk3:
+                            show_resource_image("ori", _BASE, st)
+                            st.caption(f"{g_res['ori']:,}")
+                        with bk4:
+                            show_resource_image("db", _BASE, st)
+                            st.caption(f"{g_res['db']:,}")
                     with dc2:
                         st.markdown(f"**📜 Sacred Codex** (★{cur_codex} → ★{tgt_codex})")
-                        st.markdown(f"- 🧵 {c_res['mt']:,} MT · ⛏️ {c_res['ori']:,} Ori · 🩸 {c_res['db']:,} DB")
+                        bk1, bk2, bk3 = st.columns(3)
+                        with bk1:
+                            show_resource_image("mt", _BASE, st)
+                            st.caption(f"{c_res['mt']:,}")
+                        with bk2:
+                            show_resource_image("ori", _BASE, st)
+                            st.caption(f"{c_res['ori']:,}")
+                        with bk3:
+                            show_resource_image("db", _BASE, st)
+                            st.caption(f"{c_res['db']:,}")
 
             # Level-by-level breakdown
             if tgt_gear != cur_gear:
@@ -282,11 +311,15 @@ with tab_calc:
                         r = calc_gear_resources(i - 1, i)
                         rows_lv.append({
                             t("Nível", "Level"): _LEVEL_OPTS[i],
-                            "🔩 RM": f"{r['rm']:,}",
-                            "🧵 MT": f"{r['mt']:,}",
-                            "⛏️ Ori": f"{r['ori']:,}",
-                            "🩸 DB": f"{r['db']:,}",
+                            "RM": f"{r['rm']:,}",
+                            "MT": f"{r['mt']:,}",
+                            "Ori": f"{r['ori']:,}",
+                            "DB": f"{r['db']:,}",
                         })
+                    _lv_hdr = st.columns([3, 1, 1, 1, 1])
+                    for col, label in zip(_lv_hdr[1:], ["rm", "mt", "ori", "db"]):
+                        with col:
+                            show_resource_image(label, _BASE, st)
                     st.dataframe(pd.DataFrame(rows_lv), use_container_width=True, hide_index=True)
 
             # Codex star breakdown
@@ -297,10 +330,14 @@ with tab_calc:
                         e = CODEX_STAR_COSTS[i]
                         rows_cx.append({
                             "★": e[0],
-                            "🧵 MT": e[1],
-                            "⛏️ Ori": e[2],
-                            "🩸 DB": e[3],
+                            "MT": e[1],
+                            "Ori": e[2],
+                            "DB": e[3],
                         })
+                    _cx_hdr = st.columns([1, 1, 1, 1])
+                    for col, label in zip(_cx_hdr[1:], ["mt", "ori", "db"]):
+                        with col:
+                            show_resource_image(label, _BASE, st)
                     st.dataframe(pd.DataFrame(rows_cx), use_container_width=True, hide_index=True)
 
             # ── Event Impact ──────────────────────────────────────────────────
@@ -369,7 +406,7 @@ with tab_plan:
                 })
                 st.rerun()
     else:
-        show_codex_image(_BASE, st, height=40)
+        show_codex_image(_BASE, st, height=22)
         cx1, cx2 = st.columns(2)
         with cx1:
             p_cur_codex = st.number_input(t("Estrelas atuais", "Current stars"),
@@ -425,10 +462,10 @@ with tab_plan:
                 t("Facção", "Faction"): faction_disp,
                 t("Tipo", "Type"): type_disp,
                 t("De → Para", "From → To"): f"{cur_label} → {tgt_label}",
-                "🔩 RM": f"{e['rm']:,}",
-                "🧵 MT": f"{e['mt']:,}",
-                "⛏️ Ori": f"{e['ori']:,}",
-                "🩸 DB": f"{e['db']:,}",
+                "RM": f"{e['rm']:,}",
+                "MT": f"{e['mt']:,}",
+                "Ori": f"{e['ori']:,}",
+                "DB": f"{e['db']:,}",
             })
         df = pd.DataFrame(rows_tbl).set_index("#")
         st.dataframe(df, use_container_width=True)
@@ -470,16 +507,20 @@ with tab_plan:
         st.markdown("")
         tm1, tm2, tm3, tm4 = st.columns(4)
         with tm1:
-            _render_metric_net("🔩 " + t("Metal Refinado total", "Total Refined Metal"),
+            show_resource_image("rm", _BASE, st)
+            _render_metric_net(t("Metal Refinado total", "Total Refined Metal"),
                                total_rm, inv_rm_p)
         with tm2:
-            _render_metric_net("🧵 " + t("Fio Mágico total", "Total Magic Thread"),
+            show_resource_image("mt", _BASE, st)
+            _render_metric_net(t("Fio Mágico total", "Total Magic Thread"),
                                total_mt, inv_mt_p)
         with tm3:
-            _render_metric_net("⛏️ " + t("Oricalco total", "Total Orichalcum"),
+            show_resource_image("ori", _BASE, st)
+            _render_metric_net(t("Oricalco total", "Total Orichalcum"),
                                total_ori, inv_ori_p)
         with tm4:
-            _render_metric_net("🩸 " + t("Sangue de Dragão total", "Total Dragon Blood"),
+            show_resource_image("db", _BASE, st)
+            _render_metric_net(t("Sangue de Dragão total", "Total Dragon Blood"),
                                total_db, inv_db_p)
 
         # ── Event Impact ──────────────────────────────────────────────────────
@@ -507,6 +548,10 @@ with tab_ref:
             "Custo acumulado de cada milestone a partir do anterior.",
             "Incremental cost of each milestone from the previous one.",
         ))
+        _ref_hdr = st.columns([3, 1, 1, 1, 1])
+        for col, label in zip(_ref_hdr[1:], ["rm", "mt", "ori", "db"]):
+            with col:
+                show_resource_image(label, _BASE, st)
         ref_rows = []
         for i in range(1, len(GEAR_MILESTONES)):
             res = calc_gear_resources(i - 1, i)
@@ -516,10 +561,10 @@ with tab_ref:
             ref_rows.append({
                 "#": i,
                 t("Nível", "Level"): f"{badge} {name}",
-                "🔩 RM": f"{res['rm']:,}" if res['rm'] else "—",
-                "🧵 MT": f"{res['mt']:,}" if res['mt'] else "—",
-                "⛏️ Ori": f"{res['ori']:,}" if res['ori'] else "—",
-                "🩸 DB": f"{res['db']:,}" if res['db'] else "—",
+                "RM": f"{res['rm']:,}" if res['rm'] else "—",
+                "MT": f"{res['mt']:,}" if res['mt'] else "—",
+                "Ori": f"{res['ori']:,}" if res['ori'] else "—",
+                "DB": f"{res['db']:,}" if res['db'] else "—",
             })
         st.dataframe(pd.DataFrame(ref_rows).set_index("#"),
                      use_container_width=True, height=600)
@@ -530,18 +575,26 @@ with tab_ref:
             "Sem Metal Refinado — Sacred Codex usa apenas MT, Oricalco e Sangue de Dragão.",
             "No Refined Metal — Sacred Codex uses only MT, Orichalcum and Dragon Blood.",
         ))
+        _cx_ref_hdr = st.columns([1, 1, 1, 1, 1, 1, 1])
+        for col, label in zip(_cx_ref_hdr[1:4], ["mt", "ori", "db"]):
+            with col:
+                show_resource_image(label, _BASE, st)
+        for col, label in zip(_cx_ref_hdr[4:], ["mt", "ori", "db"]):
+            with col:
+                show_resource_image(label, _BASE, st)
+        acum = t("Acum.", "Cum.")
         codex_rows = []
         cum_mt = cum_ori = cum_db = 0
         for e in CODEX_STAR_COSTS:
             cum_mt += e[1]; cum_ori += e[2]; cum_db += e[3]
             codex_rows.append({
                 "★": e[0],
-                "🧵 MT": e[1],
-                "⛏️ Ori": e[2],
-                "🩸 DB": e[3] if e[3] else "—",
-                f"🧵 {t('Acum.','Cum.')}": cum_mt,
-                f"⛏️ {t('Acum.','Cum.')}": cum_ori,
-                f"🩸 {t('Acum.','Cum.')}": cum_db,
+                "MT": e[1],
+                "Ori": e[2],
+                "DB": e[3] if e[3] else "—",
+                f"MT {acum}": cum_mt,
+                f"Ori {acum}": cum_ori,
+                f"DB {acum}": cum_db,
             })
         st.dataframe(pd.DataFrame(codex_rows).set_index("★"),
                      use_container_width=True, height=600)

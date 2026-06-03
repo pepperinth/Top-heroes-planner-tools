@@ -13,7 +13,7 @@ Sources: TopHeroes Tables spreadsheet, Gear sheet (columns P-T for gear, W-Y for
 # ══════════════════════════════════════════════════════════════════════════════
 
 GEAR_IMG_DIR = "lord_gear_imgs"
-_RESOURCE_H  = 40   # fixed display height for resource icons
+_RESOURCE_H  = 22   # fixed display height for resource icons
 
 RESOURCE_IMAGES: dict[str, str] = {
     "rm":  "image237.png",   # Refined Metal   (col Q)
