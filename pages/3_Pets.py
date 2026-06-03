@@ -13,6 +13,18 @@ from pet_engine import (
     calc_milestone, calc_to_target, max_level_with_food, get_stats,
 )
 from events_data import EVENTS, get_milestone_status
+from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR
+
+_BASE = os.path.dirname(os.path.dirname(__file__))
+
+# English pet faction → Portuguese icon key
+_FACTION_KEY = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza"}
+# Portuguese display names
+_FACTION_PT  = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza"}
+
+def _faction_icon(faction_en: str, width: int = 32):
+    path = os.path.join(_BASE, FACTION_ICON_DIR, FACTION_ICONS[_FACTION_KEY[faction_en]])
+    st.image(path, width=width)
 
 st.set_page_config(page_title="Pet Calculator", page_icon="🐾", layout="wide")
 
@@ -171,8 +183,10 @@ with tab_calc:
 
     ic1, ic2 = st.columns([1, 3])
     with ic1:
-        st.metric(t("Facção", "Faction"), f"{FACTION_EMOJI[pet_faction]} {pet_faction}")
-        st.metric(t("Tipo", "Type"), _FS[pet_fs])
+        _faction_icon(pet_faction, width=32)
+        faction_disp = _FACTION_PT[pet_faction] if lang == "pt" else pet_faction
+        st.caption(f"**{t('Facção','Faction')}:** {faction_disp}")
+        st.caption(f"**{t('Tipo','Type')}:** {_FS[pet_fs]}")
     with ic2:
         if pet_skill != "—":
             st.markdown(f"**🎯 {t('Habilidade Ativa','Active Skill')}:** {pet_skill}")
