@@ -138,9 +138,9 @@ def _render_event_impact(rm: int, mt: int, ori: int, db: int, send_key: str):
                      "✅ Sent! Go to Regular Events to see the impact."))
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-st.title("⚙️ " + t("Lord Gear & Sacred Codex", "Lord Gear & Sacred Codex"))
+st.title("⚙️ " + t("Equipamento do Lorde & Códex Sagrado", "Lord Gear & Sacred Codex"))
 st.caption(t(
-    "Calcula Metal Refinado, Fio Mágico, Oricalco e Sangue de Dragão para evoluir o Lord Gear e o Sacred Codex.",
+    "Calcula Metal Refinado, Fio Mágico, Oricalco e Sangue de Dragão para evoluir o Equipamento do Lorde e o Códex Sagrado.",
     "Calculates Refined Metal, Magic Thread, Orichalcum and Dragon Blood to upgrade Lord Gear and Sacred Codex.",
 ))
 
@@ -156,7 +156,7 @@ tab_calc, tab_plan, tab_ref = st.tabs([
 with tab_calc:
 
     # ── Gear piece selector ───────────────────────────────────────────────────
-    st.subheader("⚙️ " + t("Selecione o Lord Gear", "Select Lord Gear"))
+    st.subheader("⚙️ " + t("Selecione o Equipamento do Lorde", "Select Lord Gear"))
     piece = _gear_selector("calc_piece_sel", t("Equipamento", "Equipment"))
     st.markdown("---")
 
@@ -166,7 +166,7 @@ with tab_calc:
     with col_cur:
         st.subheader("📍 " + t("Estado Atual", "Current State"))
         cur_gear_sel = st.selectbox(
-            t("Nível atual do Lord Gear", "Current Lord Gear level"),
+            t("Nível atual do Equipamento do Lorde", "Current Lord Gear level"),
             _LEVEL_OPTS, index=0, key="calc_cur_gear",
         )
         cur_gear = _level_idx(cur_gear_sel)
@@ -177,7 +177,7 @@ with tab_calc:
         st.markdown("")
         show_codex_image(_BASE, st, height=22)
         cur_codex = st.number_input(
-            t("Estrelas atuais do Sacred Codex", "Current Sacred Codex stars"),
+            t("Estrelas atuais do Códex Sagrado", "Current Sacred Codex stars"),
             min_value=0, max_value=MAX_CODEX_STARS, value=0, step=1,
             key="calc_cur_codex",
         )
@@ -185,7 +185,7 @@ with tab_calc:
     with col_tgt:
         st.subheader("🎯 " + t("Estado Alvo", "Target State"))
         tgt_gear_sel = st.selectbox(
-            t("Nível alvo do Lord Gear", "Target Lord Gear level"),
+            t("Nível alvo do Equipamento do Lorde", "Target Lord Gear level"),
             _LEVEL_OPTS, index=MAX_GEAR_LEVEL, key="calc_tgt_gear",
         )
         tgt_gear = _level_idx(tgt_gear_sel)
@@ -196,7 +196,7 @@ with tab_calc:
         st.markdown("")
         show_codex_image(_BASE, st, height=22)
         tgt_codex = st.number_input(
-            t("Estrelas alvo do Sacred Codex", "Target Sacred Codex stars"),
+            t("Estrelas alvo do Códex Sagrado", "Target Sacred Codex stars"),
             min_value=0, max_value=MAX_CODEX_STARS, value=MAX_CODEX_STARS, step=1,
             key="calc_tgt_codex",
         )
@@ -276,7 +276,7 @@ with tab_calc:
                 with st.expander(t("📋 Detalhamento por componente", "📋 Breakdown by component")):
                     dc1, dc2 = st.columns(2)
                     with dc1:
-                        st.markdown(f"**⚙️ Lord Gear** ({_level_name(cur_gear)} → {_level_name(tgt_gear)})")
+                        st.markdown(f"**⚙️ {t('Equipamento do Lorde','Lord Gear')}** ({_level_name(cur_gear)} → {_level_name(tgt_gear)})")
                         bk1, bk2, bk3, bk4 = st.columns(4)
                         with bk1:
                             show_resource_image("rm", _BASE, st)
@@ -291,7 +291,7 @@ with tab_calc:
                             show_resource_image("db", _BASE, st)
                             st.caption(f"{g_res['db']:,}")
                     with dc2:
-                        st.markdown(f"**📜 Sacred Codex** (★{cur_codex} → ★{tgt_codex})")
+                        st.markdown(f"**📜 {t('Códex Sagrado','Sacred Codex')}** (★{cur_codex} → ★{tgt_codex})")
                         bk1, bk2, bk3 = st.columns(3)
                         with bk1:
                             show_resource_image("mt", _BASE, st)
@@ -324,7 +324,7 @@ with tab_calc:
 
             # Codex star breakdown
             if tgt_codex != cur_codex:
-                with st.expander(t("📜 Detalhamento por estrela (Sacred Codex)", "📜 Star-by-star (Sacred Codex)")):
+                with st.expander(t("📜 Detalhamento por estrela (Códex Sagrado)", "📜 Star-by-star (Sacred Codex)")):
                     rows_cx = []
                     for i in range(cur_codex, tgt_codex):
                         e = CODEX_STAR_COSTS[i]
@@ -360,10 +360,10 @@ with tab_plan:
 
     entry_type = st.radio(
         t("Tipo de entrada", "Entry type"),
-        [t("Lord Gear", "Lord Gear"), t("Sacred Codex", "Sacred Codex")],
+        [t("Equipamento do Lorde", "Lord Gear"), t("Códex Sagrado", "Sacred Codex")],
         horizontal=True, key="plan_entry_type",
     )
-    is_codex = entry_type == t("Sacred Codex", "Sacred Codex")
+    is_codex = entry_type == t("Códex Sagrado", "Sacred Codex")
 
     if not is_codex:
         pa1, pa2 = st.columns([2, 3], gap="large")
@@ -423,10 +423,10 @@ with tab_plan:
                 r = calc_codex_resources(p_cur_codex, p_tgt_codex)
                 plan.append({
                     "type":    "codex",
-                    "piece":   "Sacred Codex",
+                    "piece":   t("Códex Sagrado", "Sacred Codex"),
                     "faction": "—",
                     "f_en":    "—",
-                    "type_pt": "Codex",
+                    "type_pt": "Códex",
                     "type_en": "Codex",
                     "cur":     p_cur_codex,
                     "tgt":     p_tgt_codex,
@@ -543,7 +543,7 @@ with tab_ref:
     ref1, ref2 = st.columns(2, gap="large")
 
     with ref1:
-        st.subheader(t("⚙️ Custo por Nível (Lord Gear)", "⚙️ Cost per Level (Lord Gear)"))
+        st.subheader(t("⚙️ Custo por Nível (Equipamento do Lorde)", "⚙️ Cost per Level (Lord Gear)"))
         st.caption(t(
             "Custo acumulado de cada milestone a partir do anterior.",
             "Incremental cost of each milestone from the previous one.",
@@ -570,9 +570,9 @@ with tab_ref:
                      use_container_width=True, height=600)
 
     with ref2:
-        st.subheader(t("📜 Custo por Estrela (Sacred Codex)", "📜 Star Cost (Sacred Codex)"))
+        st.subheader(t("📜 Custo por Estrela (Códex Sagrado)", "📜 Star Cost (Sacred Codex)"))
         st.caption(t(
-            "Sem Metal Refinado — Sacred Codex usa apenas MT, Oricalco e Sangue de Dragão.",
+            "Sem Metal Refinado — Códex Sagrado usa apenas MT, Oricalco e Sangue de Dragão.",
             "No Refined Metal — Sacred Codex uses only MT, Orichalcum and Dragon Blood.",
         ))
         _cx_ref_hdr = st.columns([1, 1, 1, 1, 1, 1, 1])
