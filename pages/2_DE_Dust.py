@@ -342,7 +342,7 @@ for faction, bids in faction_groups.items():
 
 # ── BRILLIANCE INSTITUTE ───────────────────────────────────────────────────────
 st.divider()
-st.subheader("🔬 " + t("Instituto de Brilho", "Brilliance Institute"))
+st.subheader("🔬 " + t("Instituto de Brilhantismo", "Brilliance Institute"))
 st.caption(
     t("Construção separada. Desbloqueada no Castle B2. 15 níveis, 745 DE total. "
       "Uma vez no nível 15, todas as pesquisas de Soldado XI estarão disponíveis.",
@@ -359,7 +359,7 @@ with bi_c2:
                              min_value=0, max_value=15, value=15, key="bi_to")
 
 bi_total = bi_de_cost(int(bi_from), int(bi_to))
-st.metric(t("DE — Instituto de Brilho", "DE — Brilliance Institute"), f"{bi_total:,}")
+st.metric(t("DE — Instituto de Brilhantismo", "DE — Brilliance Institute"), f"{bi_total:,}")
 
 # ── PESQUISAS — DRAGON DUST ────────────────────────────────────────────────────
 st.divider()
@@ -446,7 +446,7 @@ res_totals = {}   # tree_key → dust cost
 # ─── BI ───────────────────────────────────────────────────────────────────────
 with res_tabs[0]:
     st.caption(t(
-        "Cada pesquisa requer um nível mínimo do Instituto de Brilho (indicado nos grupos). "
+        "Cada pesquisa requer um nível mínimo do Instituto de Brilhantismo (indicado nos grupos). "
         "O nível alvo do BI é definido na seção acima.",
         "Each research requires a minimum Brilliance Institute level (shown in groups). "
         "Your BI target is set in the section above."
@@ -481,7 +481,7 @@ with res_tabs[0]:
                 ):
                     if locked:
                         st.caption(t(
-                            f"Requer Instituto de Brilho nível ≥ {req_lv}. "
+                            f"Requer Instituto de Brilhantismo nível ≥ {req_lv}. "
                             f"Seu alvo atual é BI {int(bi_to)}.",
                             f"Requires Brilliance Institute level ≥ {req_lv}. "
                             f"Your current target is BI {int(bi_to)}."
@@ -749,7 +749,7 @@ with st.expander(t("Detalhes do custo DE", "DE cost breakdown")):
          "DE": f"{castle_total_de:,}"},
         {t("Origem", "Source"): t("Outras Construções", "Other Buildings"),
          "DE": f"{other_de_total:,}"},
-        {t("Origem", "Source"): t("Instituto de Brilho", "Brilliance Institute"),
+        {t("Origem", "Source"): t("Instituto de Brilhantismo", "Brilliance Institute"),
          "DE": f"{bi_total:,}"},
         {t("Origem", "Source"): "TOTAL",
          "DE": f"{total_de_needed:,}"},

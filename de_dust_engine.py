@@ -29,7 +29,7 @@ BUILDINGS = {
     "troop":  {"en": "Troop Skin Center",   "pt": "Centro de Skins",     "faction": "all",    "costs": [95,  114, 205, None, None, None]},
     # Brilliance Institute: separate building, unlocks at Castle B2.
     # 15 levels (not standard B structure). Costs: lv1-6=32, lv7-11=57, lv12-15=67. Total=745 DE.
-    "bi":     {"en": "Brilliance Institute","pt": "Instituto de Brilho", "faction": "all",    "costs": [32,  57,  67,  None, None, None], "bi_special": True},
+    "bi":     {"en": "Brilliance Institute","pt": "Instituto de Brilhantismo", "faction": "all",    "costs": [32,  57,  67,  None, None, None], "bi_special": True},
 }
 
 BI_LEVEL_COSTS = [32] * 6 + [57] * 5 + [67] * 4   # 15 levels, 745 DE total
