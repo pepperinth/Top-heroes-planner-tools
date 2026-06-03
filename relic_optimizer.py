@@ -411,7 +411,7 @@ def compute_route(inv: dict) -> dict:
         ordered    = [p for p in cfg["priority"] if p in set_relics]
         ordered   += [r for r in set_relics if r not in ordered]
         targets    = [r for r in ordered if levels_init.get(r, 0) < target_goal]
-    elif cfg["target_relic"] and cfg["target_relic"] in ALL_SET_RELICS:
+    elif cfg["target_relic"] and cfg["target_relic"] in ALL_RELICS:
         targets = ([cfg["target_relic"]]
                    if levels_init.get(cfg["target_relic"], 0) < target_goal else [])
     else:

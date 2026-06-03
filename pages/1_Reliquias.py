@@ -63,32 +63,67 @@ LEG_OPTIONS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
 
 # ── Configuration ──────────────────────────────────────────────────────────────
 with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=True):
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        target_set = st.selectbox(
-            t("Conjunto alvo", "Target set"),
-            list(SETS.keys()), index=0,
-        )
-    with c2:
-        tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0)
-        tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0)
-        _show_relic_star(tgt_star, tgt_leg)
-    with c3:
-        hammers  = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1)
-        univ     = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10)
-    with c4:
-        inter1 = st.selectbox("Relay 1 (obrigatório / mandatory)", UNIVERSAL_RELICS, index=0)
-        inter2 = st.selectbox("Relay 2 (obrigatório / mandatory)", ["—"] + UNIVERSAL_RELICS, index=0)
-        inter2_val = inter2 if inter2 != "—" else ""
 
-    set_relics = SETS[target_set]
-    st.markdown(t("**Prioridade dentro do conjunto:**", "**Priority within set:**"))
-    pcols = st.columns(len(set_relics))
-    priority = []
-    for i, (col, rel) in enumerate(zip(pcols, set_relics)):
-        with col:
-            picked = st.selectbox(f"#{i+1}", set_relics, index=i, key=f"prio_{i}")
-            priority.append(picked)
+    mode = st.radio(
+        t("Modo", "Mode"),
+        [t("Set completo", "Full set"), t("Relíquia única", "Single relic")],
+        horizontal=True, key="relic_mode",
+    )
+    single_mode = mode == t("Relíquia única", "Single relic")
+
+    st.divider()
+
+    if not single_mode:
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            target_set = st.selectbox(
+                t("Conjunto alvo", "Target set"),
+                list(SETS.keys()), index=0,
+            )
+        with c2:
+            tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0)
+            tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0)
+            _show_relic_star(tgt_star, tgt_leg)
+        with c3:
+            hammers  = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1)
+            univ     = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10)
+        with c4:
+            inter1 = st.selectbox("Relay 1 (obrigatório / mandatory)", UNIVERSAL_RELICS, index=0)
+            inter2 = st.selectbox("Relay 2 (obrigatório / mandatory)", ["—"] + UNIVERSAL_RELICS, index=0)
+            inter2_val = inter2 if inter2 != "—" else ""
+
+        set_relics = SETS[target_set]
+        st.markdown(t("**Prioridade dentro do conjunto:**", "**Priority within set:**"))
+        pcols = st.columns(len(set_relics))
+        priority = []
+        for i, (col, rel) in enumerate(zip(pcols, set_relics)):
+            with col:
+                picked = st.selectbox(f"#{i+1}", set_relics, index=i, key=f"prio_{i}")
+                priority.append(picked)
+
+    else:  # single relic mode
+        s1, s2, s3, s4 = st.columns(4)
+        with s1:
+            single_relic = st.selectbox(
+                t("Relíquia alvo", "Target relic"),
+                ALL_RELICS,
+                key="single_relic_sel",
+            )
+            relic_kind = t("Universal", "Universal") if single_relic in UNIVERSAL_RELICS else t("Set", "Set")
+            st.caption(relic_kind)
+        with s2:
+            tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0, key="sr_tgt_star")
+            tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0, key="sr_tgt_leg")
+            _show_relic_star(tgt_star, tgt_leg)
+        with s3:
+            hammers = st.number_input(t("Miracle Hammers", "Miracle Hammers"), min_value=1, max_value=30, value=1, key="sr_hammers")
+            univ    = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10, key="sr_univ")
+        with s4:
+            inter1 = st.selectbox("Relay 1 (obrigatório / mandatory)", UNIVERSAL_RELICS, index=0, key="sr_inter1")
+            inter2 = st.selectbox("Relay 2 (obrigatório / mandatory)", ["—"] + UNIVERSAL_RELICS, index=0, key="sr_inter2")
+            inter2_val = inter2 if inter2 != "—" else ""
+        target_set = ""
+        priority   = []
 
 # ── Inventory table ────────────────────────────────────────────────────────────
 st.markdown("---")
@@ -144,7 +179,6 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
         }
 
     target_level = star_leg_to_idx(tgt_star, tgt_leg)
-    # Exclude relics the user unchecked ("Usar?" = False) or removed from the table
     priority_active = [p for p in priority
                        if relics_dict.get(p, {}).get("can_use", True)]
 
@@ -152,9 +186,9 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
         "universal_shards": univ,
         "relics": relics_dict,
         "config": {
-            "target_set":    target_set,
-            "target_relic":  "",
-            "priority":      priority_active,
+            "target_set":    "" if single_mode else target_set,
+            "target_relic":  single_relic if single_mode else "",
+            "priority":      [] if single_mode else priority_active,
             "inter1":        inter1,
             "inter2":        inter2_val,
             "target_level":  target_level,

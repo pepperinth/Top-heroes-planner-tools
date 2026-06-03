@@ -7,6 +7,25 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 import streamlit as st
 import pandas as pd
+from PIL import Image
+
+_BASE    = os.path.dirname(os.path.dirname(__file__))
+_IMG_DIR = os.path.join(_BASE, "de_dust_imgs")
+_ICON_H  = 22
+
+def _show_de(st_mod=None):
+    m = st_mod or st
+    img = Image.open(os.path.join(_IMG_DIR, "dragon_essence.png"))
+    r = _ICON_H / img.height
+    w = max(1, int(img.width * r))
+    m.image(img.resize((w, _ICON_H), Image.LANCZOS), width=w)
+
+def _show_dust(st_mod=None):
+    m = st_mod or st
+    img = Image.open(os.path.join(_IMG_DIR, "dragon_dust.png"))
+    r = _ICON_H / img.height
+    w = max(1, int(img.width * r))
+    m.image(img.resize((w, _ICON_H), Image.LANCZOS), width=w)
 from de_dust_engine import (
     BUILDINGS, CASTLE_PREREQS, PREREQ_LABELS, FACTION_LABEL,
     BI_LEVEL_COSTS,
@@ -50,11 +69,13 @@ st.caption("Dragon Essence (DE) · Dragon Dust · Brilliance (s108+)")
 with st.expander(t("📦 Inventário de Recursos", "📦 Resource Inventory"), expanded=True):
     c1, c2, c3 = st.columns(3)
     with c1:
+        _show_de()
         de_avail = st.number_input(
             t("Dragon Essence disponível", "Available Dragon Essence"),
             min_value=0, value=0, step=500, format="%d", key="de_avail",
         )
     with c2:
+        _show_dust()
         dust_avail = st.number_input(
             t("Dragon Dust disponível", "Available Dragon Dust"),
             min_value=0, value=0, step=500, format="%d", key="dust_avail",
@@ -655,7 +676,11 @@ eff_de_balance   = (de_balance if priority == _prio_bld
                     else de_eff - total_de_needed - de_for_conv)
 
 # --- Métricas DE ---
-st.markdown("**Dragon Essence (DE)**")
+_h1, _h2 = st.columns([1, 20])
+with _h1:
+    _show_de()
+with _h2:
+    st.markdown("**Dragon Essence (DE)**")
 _de1, _de2, _de3 = st.columns(3)
 _de1.metric(t("DE Disponível",  "Available DE"),  f"{de_eff:,}")
 _de2.metric(t("DE Necessário",  "Required DE"),   f"{total_de_needed:,}")
@@ -666,7 +691,11 @@ _de3.metric(
 )
 
 # --- Métricas Pó ---
-st.markdown("**Dragon Dust (pó)**")
+_h3, _h4 = st.columns([1, 20])
+with _h3:
+    _show_dust()
+with _h4:
+    st.markdown("**Dragon Dust**")
 _du1, _du2, _du3 = st.columns(3)
 _du1.metric(t("Pó Disponível",  "Available Dust"),  f"{dust_eff:,}")
 _du2.metric(t("Pó Necessário",  "Required Dust"),   f"{total_dust_research:,}")
