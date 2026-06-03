@@ -74,7 +74,7 @@ _DISP_TO_EN = {v: k for k, v in _BRK_DISPLAY.items()}
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.title("🏗️ " + t("Planejador DE & Pó", "DE & Dust Planner"))
 st.caption(t(
-    "Dragon Essence (DE) · Dragon Dust · Brilho (s108+)",
+    "Essência de Dragão (DE) · Pó de Dragão · Brilho (s108+)",
     "Dragon Essence (DE) · Dragon Dust · Brilliance (s108+)",
 ))
 
@@ -84,13 +84,13 @@ with st.expander(t("📦 Inventário de Recursos", "📦 Resource Inventory"), e
     with c1:
         _show_de()
         de_avail = st.number_input(
-            t("Dragon Essence disponível", "Dragon Essence available"),
+            t("Essência de Dragão disponível", "Dragon Essence available"),
             min_value=0, value=0, step=500, format="%d", key="de_avail",
         )
     with c2:
         _show_dust()
         dust_avail = st.number_input(
-            t("Dragon Dust disponível", "Dragon Dust available"),
+            t("Pó de Dragão disponível", "Dragon Dust available"),
             min_value=0, value=0, step=500, format="%d", key="dust_avail",
         )
     with c3:
@@ -363,7 +363,7 @@ st.metric(t("DE — Instituto de Brilhantismo", "DE — Brilliance Institute"), 
 
 # ── PESQUISAS — DRAGON DUST ────────────────────────────────────────────────────
 st.divider()
-st.subheader("📜 " + t("Pesquisas — Dragon Dust", "Research — Dragon Dust"))
+st.subheader("📜 " + t("Pesquisas — Pó de Dragão", "Research — Dragon Dust"))
 st.caption(t(
     "BI e Facção são independentes por facção (League / Horde / Nature) — custo ×3. "
     "Awakening, S2, S3 e S4 são compartilhadas (árvore única).",
@@ -693,7 +693,7 @@ _h1, _h2 = st.columns([1, 20])
 with _h1:
     _show_de()
 with _h2:
-    st.markdown(f"**{t('Dragon Essence (DE)', 'Dragon Essence (DE)')}**")
+    st.markdown(f"**{t('Essência de Dragão (DE)', 'Dragon Essence (DE)')}**")
 _de1, _de2, _de3 = st.columns(3)
 _de1.metric(t("DE Disponível",  "Available DE"),  f"{de_eff:,}")
 _de2.metric(t("DE Necessário",  "Required DE"),   f"{total_de_needed:,}")
@@ -708,7 +708,7 @@ _h3, _h4 = st.columns([1, 20])
 with _h3:
     _show_dust()
 with _h4:
-    st.markdown(f"**{t('Dragon Dust', 'Dragon Dust')}**")
+    st.markdown(f"**{t('Pó de Dragão', 'Dragon Dust')}**")
 _du1, _du2, _du3 = st.columns(3)
 _du1.metric(t("Pó Disponível",  "Available Dust"),  f"{dust_eff:,}")
 _du2.metric(t("Pó Necessário",  "Required Dust"),   f"{total_dust_research:,}")
