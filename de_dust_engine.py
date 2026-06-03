@@ -56,9 +56,9 @@ PREREQ_LABELS = {
 
 FACTION_LABEL = {
     "all":    {"en": "All factions", "pt": "Todas as facções"},
-    "league": {"en": "League",       "pt": "League"},
-    "horde":  {"en": "Horde",        "pt": "Horde"},
-    "nature": {"en": "Nature",       "pt": "Nature"},
+    "league": {"en": "League",       "pt": "Liga"},
+    "horde":  {"en": "Horde",        "pt": "Horda"},
+    "nature": {"en": "Nature",       "pt": "Natureza"},
 }
 
 

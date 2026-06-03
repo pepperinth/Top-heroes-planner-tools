@@ -59,11 +59,24 @@ def t(pt, en): return pt if lang == "pt" else en
 B_OPTIONS = ["B0", "B1", "B2", "B3", "B4", "B5", "B6"]
 
 _FACS      = ["league", "horde", "nature"]
-_FAC_NAMES = {"league": "⚔️ League", "horde": "🔥 Horde", "nature": "🌿 Nature"}
+_FAC_NAMES = {
+    "league": "⚔️ " + t("Liga",     "League"),
+    "horde":  "🔥 " + t("Horda",    "Horde"),
+    "nature": "🌿 " + t("Natureza", "Nature"),
+}
+_BRK_DISPLAY = {
+    "League": t("Liga",     "League"),
+    "Horde":  t("Horda",    "Horde"),
+    "Nature": t("Natureza", "Nature"),
+}
+_DISP_TO_EN = {v: k for k, v in _BRK_DISPLAY.items()}
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.title("🏗️ " + t("Planejador DE & Pó", "DE & Dust Planner"))
-st.caption("Dragon Essence (DE) · Dragon Dust · Brilliance (s108+)")
+st.caption(t(
+    "Dragon Essence (DE) · Dragon Dust · Brilho (s108+)",
+    "Dragon Essence (DE) · Dragon Dust · Brilliance (s108+)",
+))
 
 # ── INVENTÁRIO ─────────────────────────────────────────────────────────────────
 with st.expander(t("📦 Inventário de Recursos", "📦 Resource Inventory"), expanded=True):
@@ -71,13 +84,13 @@ with st.expander(t("📦 Inventário de Recursos", "📦 Resource Inventory"), e
     with c1:
         _show_de()
         de_avail = st.number_input(
-            t("Dragon Essence disponível", "Available Dragon Essence"),
+            t("Dragon Essence disponível", "Dragon Essence available"),
             min_value=0, value=0, step=500, format="%d", key="de_avail",
         )
     with c2:
         _show_dust()
         dust_avail = st.number_input(
-            t("Dragon Dust disponível", "Available Dragon Dust"),
+            t("Dragon Dust disponível", "Dragon Dust available"),
             min_value=0, value=0, step=500, format="%d", key="dust_avail",
         )
     with c3:
@@ -130,15 +143,15 @@ castle_to_b   = castle_to_bar // 5
 _BRK_MAP = {"League": "brk_l", "Horde": "brk_h", "Nature": "brk_n"}
 brk_any_choice = "brk_l"
 if castle_to_b >= 5:
-    # Sort: barracks NOT yet needed at current castle level appear first
     _pre_chain = castle_prereq_chain(castle_from_b, 0, {}, "brk_l")
     _pre_b     = {p["building_id"]: p["required_b"] for p in _pre_chain if not p["is_regular_level"]}
-    _brk_opts  = sorted(_BRK_MAP.keys(), key=lambda x: (_pre_b.get(_BRK_MAP[x], 0), x))
-    brk_pick = st.selectbox(
+    _brk_opts_en = sorted(_BRK_MAP.keys(), key=lambda x: (_pre_b.get(_BRK_MAP[x], 0), x))
+    _brk_opts    = [_BRK_DISPLAY[k] for k in _brk_opts_en]
+    brk_pick_disp = st.selectbox(
         t("Quartel para pré-requisito B5/B6 (escolha)", "Barracks for B5/B6 prerequisite (choose)"),
         _brk_opts, key=f"brk_any_{castle_from_b}_{castle_to_b}",
     )
-    brk_any_choice = _BRK_MAP[brk_pick]
+    brk_any_choice = _BRK_MAP[_DISP_TO_EN[brk_pick_disp]]
 
 # Collect current B levels for prerequisite buildings
 temp_chain    = castle_prereq_chain(castle_to_b, castle_from_b, {}, brk_any_choice)
@@ -329,7 +342,7 @@ for faction, bids in faction_groups.items():
 
 # ── BRILLIANCE INSTITUTE ───────────────────────────────────────────────────────
 st.divider()
-st.subheader("🔬 Brilliance Institute")
+st.subheader("🔬 " + t("Instituto de Brilho", "Brilliance Institute"))
 st.caption(
     t("Construção separada. Desbloqueada no Castle B2. 15 níveis, 745 DE total. "
       "Uma vez no nível 15, todas as pesquisas de Soldado XI estarão disponíveis.",
@@ -346,7 +359,7 @@ with bi_c2:
                              min_value=0, max_value=15, value=15, key="bi_to")
 
 bi_total = bi_de_cost(int(bi_from), int(bi_to))
-st.metric(t("DE — Brilliance Institute", "DE — Brilliance Institute"), f"{bi_total:,}")
+st.metric(t("DE — Instituto de Brilho", "DE — Brilliance Institute"), f"{bi_total:,}")
 
 # ── PESQUISAS — DRAGON DUST ────────────────────────────────────────────────────
 st.divider()
@@ -680,7 +693,7 @@ _h1, _h2 = st.columns([1, 20])
 with _h1:
     _show_de()
 with _h2:
-    st.markdown("**Dragon Essence (DE)**")
+    st.markdown(f"**{t('Dragon Essence (DE)', 'Dragon Essence (DE)')}**")
 _de1, _de2, _de3 = st.columns(3)
 _de1.metric(t("DE Disponível",  "Available DE"),  f"{de_eff:,}")
 _de2.metric(t("DE Necessário",  "Required DE"),   f"{total_de_needed:,}")
@@ -695,7 +708,7 @@ _h3, _h4 = st.columns([1, 20])
 with _h3:
     _show_dust()
 with _h4:
-    st.markdown("**Dragon Dust**")
+    st.markdown(f"**{t('Dragon Dust', 'Dragon Dust')}**")
 _du1, _du2, _du3 = st.columns(3)
 _du1.metric(t("Pó Disponível",  "Available Dust"),  f"{dust_eff:,}")
 _du2.metric(t("Pó Necessário",  "Required Dust"),   f"{total_dust_research:,}")
@@ -736,7 +749,7 @@ with st.expander(t("Detalhes do custo DE", "DE cost breakdown")):
          "DE": f"{castle_total_de:,}"},
         {t("Origem", "Source"): t("Outras Construções", "Other Buildings"),
          "DE": f"{other_de_total:,}"},
-        {t("Origem", "Source"): "Brilliance Institute",
+        {t("Origem", "Source"): t("Instituto de Brilho", "Brilliance Institute"),
          "DE": f"{bi_total:,}"},
         {t("Origem", "Source"): "TOTAL",
          "DE": f"{total_de_needed:,}"},

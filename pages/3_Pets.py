@@ -107,7 +107,7 @@ inv_rows = []
 for name, faction, fs, skill, passive in PETS:
     inv_rows.append({
         _col_pet:  f"{FACTION_EMOJI[faction]} {name}",
-        _col_fac:  faction,
+        _col_fac:  _FACTION_PT[faction] if lang == "pt" else faction,
         _col_type: _FS[fs],
         _col_cop:  0,
         _col_exc:  False,
