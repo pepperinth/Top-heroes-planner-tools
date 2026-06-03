@@ -89,7 +89,7 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
             target_set = {"Liga": "League", "Horda": "Horde", "Natureza": "Nature"}.get(_set_disp, _set_disp)
         with c2:
             tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0)
-            tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0)
+            tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, index=0)
             _show_relic_star(tgt_star, tgt_leg)
         with c3:
             hammers  = st.number_input(t("Martelos Milagrosos", "Miracle Hammers"), min_value=1, max_value=30, value=1)
@@ -125,7 +125,7 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
             st.caption(relic_kind)
         with s2:
             tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0, key="sr_tgt_star")
-            tgt_leg  = st.selectbox(t("Leg alvo", "Target leg"), LEG_OPTIONS, index=0, key="sr_tgt_leg")
+            tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, index=0, key="sr_tgt_leg")
             _show_relic_star(tgt_star, tgt_leg)
         with s3:
             hammers = st.number_input(t("Martelos Milagrosos", "Miracle Hammers"), min_value=1, max_value=30, value=1, key="sr_hammers")
@@ -152,7 +152,7 @@ for relic in ALL_RELICS:
         t("Relíquia", "Relic"):          _rn(relic),
         t("Tipo", "Type"):               kind,
         t("Estrela", "Star"):            "0★",
-        t("Leg", "Leg"):                 "—",
+        t("Perna", "Leg"):                 "—",
         t("Frag. específicos", "Spec. shards"): 0,
         t("Usar?", "Use?"):              True,
     })
@@ -166,7 +166,7 @@ edited = st.data_editor(
     disabled=[t("Relíquia", "Relic"), t("Tipo", "Type")],
     column_config={
         t("Estrela", "Star"): st.column_config.SelectboxColumn(options=STAR_OPTIONS),
-        t("Leg", "Leg"):      st.column_config.SelectboxColumn(options=["—"] + LEG_OPTIONS),
+        t("Perna", "Leg"):      st.column_config.SelectboxColumn(options=["—"] + LEG_OPTIONS),
         t("Frag. específicos", "Spec. shards"): st.column_config.NumberColumn(min_value=0, step=1),
         t("Usar?", "Use?"):   st.column_config.CheckboxColumn(),
     },
@@ -181,7 +181,7 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
     for _, row in edited.iterrows():
         name    = _rn_en(row[t("Relíquia", "Relic")])
         star    = row[t("Estrela", "Star")]
-        leg_raw = row[t("Leg", "Leg")]
+        leg_raw = row[t("Perna", "Leg")]
         leg     = leg_raw if leg_raw != "—" else "1/5"
         _spec_raw = row[t("Frag. específicos", "Spec. shards")]
         spec    = int(_spec_raw) if _spec_raw == _spec_raw else 0  # NaN guard
