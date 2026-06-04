@@ -97,16 +97,28 @@ def _render_milestones(milestones: list, grand_total: float, t):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _render_event_tab(ev: dict, t, lang: str = "pt"):
-    # One-shot delivery from calculators: move pending pts into the widget key
-    _delivery = f"_pts_to_send_{ev['sheet']}"
+    sheet = ev['sheet']
+
+    # One-shot delivery (calculators that use _pts_to_send_)
+    _delivery = f"_pts_to_send_{sheet}"
     if _delivery in st.session_state:
-        st.session_state[f"cur_{ev['sheet']}"] = st.session_state[_delivery]
+        st.session_state[f"cur_{sheet}"] = st.session_state[_delivery]
         del st.session_state[_delivery]
+
+    # Multi-source persistent contributions: sum all _src_*_{sheet} keys
+    # Allows multiple calculators (e.g. Lord Gear + Troop Skins) to each keep their own
+    # contribution without overwriting each other.
+    _src_total = sum(
+        v for k, v in st.session_state.items()
+        if k.startswith("_src_") and k.endswith(f"_{sheet}") and isinstance(v, (int, float))
+    )
+    if _src_total > 0:
+        st.session_state[f"cur_{sheet}"] = int(_src_total)
 
     current_pts = st.number_input(
         t("Pontos atuais que você já tem:", "Current points you already have:"),
         min_value=0, value=0, step=100,
-        key=f"cur_{ev['sheet']}",
+        key=f"cur_{sheet}",
         help=t(
             "Insira os pontos que você já acumulou neste evento.",
             "Enter the points you already have accumulated for this event.",
@@ -120,7 +132,10 @@ def _render_event_tab(ev: dict, t, lang: str = "pt"):
     st.markdown("---")
     st.markdown(f"#### {t('Tarefas — insira as quantidades abaixo', 'Tasks — enter raw quantities below')}")
 
-    _has_calc = st.session_state.get(f"_calc_sent_{ev['sheet']}", False)
+    _has_calc = (
+        st.session_state.get(f"_calc_sent_{sheet}", False) or
+        any(k.startswith("_src_") and k.endswith(f"_{sheet}") for k in st.session_state)
+    )
     if _has_calc:
         st.info(t(
             "🔗 Pontos atuais pré-preenchidos pelas calculadoras. "

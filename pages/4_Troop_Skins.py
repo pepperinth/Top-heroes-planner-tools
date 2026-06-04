@@ -308,7 +308,7 @@ with tab_calc:
     ))
 
     if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_skin_calc_evt"):
-        st.session_state["_pts_to_send_Lord_Gear_Trial"]    = int(pts_gear_c)
+        st.session_state["_src_troop_skin_Lord_Gear_Trial"] = int(pts_gear_c)
         st.session_state["_calc_contrib_Lord_Gear_Trial_4"] = int((tok_total if rarity == "Rare"      else 0) * 30)
         st.session_state["_calc_contrib_Lord_Gear_Trial_5"] = int((tok_total if rarity == "Epic"      else 0) * 300)
         st.session_state["_calc_contrib_Lord_Gear_Trial_6"] = int((tok_total if rarity == "Legendary" else 0) * 3000)
@@ -493,7 +493,7 @@ with tab_plan:
         st.caption(f"Milestones: {ms_icons_p2}")
 
         if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_skin_plan_evt"):
-            st.session_state["_pts_to_send_Lord_Gear_Trial"]    = int(pts_gear_p)
+            st.session_state["_src_troop_skin_Lord_Gear_Trial"] = int(pts_gear_p)
             st.session_state["_calc_contrib_Lord_Gear_Trial_4"] = int(pts_rar_p)
             st.session_state["_calc_contrib_Lord_Gear_Trial_5"] = int(pts_epi_p)
             st.session_state["_calc_contrib_Lord_Gear_Trial_6"] = int(pts_leg_p)
@@ -507,8 +507,8 @@ with tab_plan:
         st.divider()
         if st.button("🗑️ " + t("Limpar plano", "Clear plan"), key="sp_clear"):
             st.session_state["skin_plan"] = []
-            st.session_state["_pts_to_send_Lord_Gear_Trial"] = 0
-            st.session_state["_calc_sent_Lord_Gear_Trial"]   = False
+            st.session_state.pop("_src_troop_skin_Lord_Gear_Trial", None)
+            st.session_state["_calc_sent_Lord_Gear_Trial"] = False
             for _k in [4, 5, 6, 7]:
                 st.session_state.pop(f"_calc_contrib_Lord_Gear_Trial_{_k}", None)
             st.rerun()

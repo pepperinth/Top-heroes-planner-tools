@@ -128,7 +128,7 @@ def _render_event_impact(rm: int, mt: int, ori: int, db: int, send_key: str):
     st.markdown(f"**{t('Total estimado','Estimated total')}: {total:,.0f} pts**")
 
     if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key=send_key):
-        st.session_state["_pts_to_send_Lord_Gear_Trial"]          = int(total)
+        st.session_state["_src_lord_gear_Lord_Gear_Trial"]         = int(total)
         st.session_state["_calc_contrib_Lord_Gear_Trial_0"]        = int(pts["rm"])
         st.session_state["_calc_contrib_Lord_Gear_Trial_1"]        = int(pts["mt"])
         st.session_state["_calc_contrib_Lord_Gear_Trial_2"]        = int(pts["ori"])
@@ -532,7 +532,7 @@ with tab_plan:
         st.markdown("---")
         if st.button("🗑️ " + t("Limpar plano", "Clear plan"), key="plan_clear"):
             st.session_state["lordgear_plan"] = []
-            st.session_state.pop("_pts_to_send_Lord_Gear_Trial", None)
+            st.session_state.pop("_src_lord_gear_Lord_Gear_Trial", None)
             st.session_state["_calc_sent_Lord_Gear_Trial"] = False
             st.rerun()
 

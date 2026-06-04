@@ -300,12 +300,12 @@ with tab_calc:
                 st.markdown(f"**{t('Total','Total')}: {pts_hd:,.0f} pts**")
 
             if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_beh_calc_evt"):
-                st.session_state["_pts_to_send_Relic_Race"]         = int(pts_rr)
+                st.session_state["_src_behemoth_Relic_Race"]        = int(pts_rr)
                 st.session_state["_calc_contrib_Relic_Race_0"]      = int(pts_rr_mag)
                 st.session_state["_calc_contrib_Relic_Race_1"]      = int(pts_rr_core)
                 st.session_state["_calc_contrib_Relic_Race_2"]      = int(pts_rr_seal)
                 st.session_state["_calc_sent_Relic_Race"]           = True
-                st.session_state["_pts_to_send_Hero_Development"]   = int(pts_hd)
+                st.session_state["_src_behemoth_Hero_Development"]  = int(pts_hd)
                 st.session_state["_calc_contrib_Hero_Development_7"]= int(pts_hd_mag)
                 st.session_state["_calc_contrib_Hero_Development_8"]= int(pts_hd_core)
                 st.session_state["_calc_contrib_Hero_Development_9"]= int(pts_hd_seal)
@@ -517,12 +517,12 @@ with tab_plan:
                 st.markdown(f"**{t('Total','Total')}: {pts_hd:,.0f} pts**")
 
             if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_beh_plan_evt"):
-                st.session_state["_pts_to_send_Relic_Race"]         = int(pts_rr)
+                st.session_state["_src_behemoth_Relic_Race"]        = int(pts_rr)
                 st.session_state["_calc_contrib_Relic_Race_0"]      = int(pts_rr_mag)
                 st.session_state["_calc_contrib_Relic_Race_1"]      = int(pts_rr_core)
                 st.session_state["_calc_contrib_Relic_Race_2"]      = int(pts_rr_seal)
                 st.session_state["_calc_sent_Relic_Race"]           = True
-                st.session_state["_pts_to_send_Hero_Development"]   = int(pts_hd)
+                st.session_state["_src_behemoth_Hero_Development"]  = int(pts_hd)
                 st.session_state["_calc_contrib_Hero_Development_7"]= int(pts_hd_mag)
                 st.session_state["_calc_contrib_Hero_Development_8"]= int(pts_hd_core)
                 st.session_state["_calc_contrib_Hero_Development_9"]= int(pts_hd_seal)
@@ -532,8 +532,8 @@ with tab_plan:
         st.markdown("---")
         if st.button("🗑️ " + t("Limpar plano", "Clear plan"), key="plan_clear"):
             st.session_state["behemoth_plan"] = []
-            st.session_state.pop("_pts_to_send_Relic_Race", None)
-            st.session_state.pop("_pts_to_send_Hero_Development", None)
+            st.session_state.pop("_src_behemoth_Relic_Race", None)
+            st.session_state.pop("_src_behemoth_Hero_Development", None)
             st.session_state["_calc_sent_Relic_Race"]       = False
             st.session_state["_calc_sent_Hero_Development"] = False
             st.rerun()

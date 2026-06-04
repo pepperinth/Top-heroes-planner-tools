@@ -14,6 +14,7 @@ from relic_optimizer import (
     star_leg_to_idx, idx_to_star_leg,
     compute_route, shards_needed,
 )
+from events_data import EVENTS, get_milestone_status
 
 st.set_page_config(page_title="Relic Optimizer", page_icon="⚜️", layout="wide")
 
@@ -257,6 +258,57 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
 
         if route.get("suboptimal_note"):
             st.warning(route["suboptimal_note"])
+
+        # ── Impacto nos Eventos Regulares ─────────────────────────────────────
+        st.markdown("---")
+        st.markdown("**📅 " + t("Impacto nos Eventos Regulares", "Regular Event Impact") + "**")
+
+        ev_rr     = next(e for e in EVENTS if e["sheet"] == "Relic_Race")
+        ev_rrname = ev_rr.get("name_pt", ev_rr["name"]) if lang == "pt" else ev_rr["name"]
+
+        # Count shards by tier: Y(1-25)=Rare×5, R(26-50)=Epic×25, P/B(51+)=Legendary×120
+        _rare_sh = _epic_sh = _leg_sh = 0
+        for _step in route["steps"]:
+            if _step["type"] != "develop":
+                continue
+            for _si in range(_step["from"] + 1, _step["to"] + 1):
+                if _si <= 25:
+                    _rare_sh += 1
+                elif _si <= 50:
+                    _epic_sh += 1
+                else:
+                    _leg_sh += 1
+
+        _pts_rare = _rare_sh * 5
+        _pts_epic = _epic_sh * 25
+        _pts_leg  = _leg_sh  * 120
+        _pts_rr   = _pts_rare + _pts_epic + _pts_leg
+
+        _rc1, _rc2, _rc3, _rc4 = st.columns(4)
+        _rc1.metric(t("Fragmentos Raros (×5)",    "Rare Shards (×5)"),
+                    f"{_rare_sh} → {_pts_rare:,.0f} pts")
+        _rc2.metric(t("Fragmentos Épicos (×25)",  "Epic Shards (×25)"),
+                    f"{_epic_sh} → {_pts_epic:,.0f} pts")
+        _rc3.metric(t("Frag. Lendários (×120)",   "Legendary Shards (×120)"),
+                    f"{_leg_sh} → {_pts_leg:,.0f} pts")
+        _rc4.metric(f"📊 {ev_rrname}", f"{_pts_rr:,.0f} pts")
+
+        _ms_rr = "  ".join(
+            f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+            for s in get_milestone_status(ev_rr["milestones"], _pts_rr)
+        )
+        st.caption(f"Milestones: {_ms_rr}")
+
+        if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_relic_evt"):
+            st.session_state["_src_relic_opt_Relic_Race"]   = int(_pts_rr)
+            st.session_state["_calc_contrib_Relic_Race_3"]  = int(_pts_rare)
+            st.session_state["_calc_contrib_Relic_Race_4"]  = int(_pts_epic)
+            st.session_state["_calc_contrib_Relic_Race_5"]  = int(_pts_leg)
+            st.session_state["_calc_sent_Relic_Race"]       = True
+            st.success(t(
+                f"✅ {_pts_rr:,.0f} pts enviados para **{ev_rrname}**! Acesse Eventos Regulares.",
+                f"✅ {_pts_rr:,.0f} pts sent to **{ev_rrname}**! Go to Regular Events.",
+            ))
 
         # Step-by-step
         with st.expander(t("📋 Passo a passo", "📋 Step by step")):
