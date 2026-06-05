@@ -120,7 +120,7 @@ with tab_tools:
         with st.container(border=True):
             st.subheader("👤 " + t("Calculadora de Heróis", "Hero Calculator"))
             st.markdown(
-                "Calcula **fragmentos, livros de habilidade, soul stones, UW, espírito heroico e traits** para evoluir seus heróis. Planejador de filas Q1–Q5."
+                "Calcula **fragmentos, livros de habilidade, soul stones, UW, espírito heroico e atributos** para evoluir seus heróis. Planejador de filas Q1–Q5."
                 if lang == "pt" else
                 "Calculates **shards, skill books, soul stones, UW, heroic spirit and traits** to upgrade your heroes. Q1–Q5 queue planner."
             )

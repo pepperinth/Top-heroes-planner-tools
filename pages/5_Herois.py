@@ -110,7 +110,7 @@ if "hero_plan_v2" not in st.session_state:
 # ── Header ─────────────────────────────────────────────────────────────────────
 st.title("👤 " + t("Calculadora de Heróis", "Hero Calculator"))
 st.caption(t(
-    "Calcula fragmentos, livros de habilidade, soul stones, UW, espírito heroico e traits.",
+    "Calcula fragmentos, livros de habilidade, soul stones, UW, espírito heroico e atributos.",
     "Calculates shards, skill books, soul stones, UW, heroic spirit and traits.",
 ))
 
@@ -163,7 +163,7 @@ with tab_calc:
         if hdata["has_uw"]:  _flags.append(t("⚔️ UW","⚔️ UW"))
         if tier == "Legendary": _flags.append(t("💎 Despertar","💎 Awakening"))
         _flags.append(f"{n_sk} {t('skills','skills')}")
-        st.caption(" · ".join(_flags) + f" · **Trait 3:** {hdata['trait3']}")
+        st.caption(" · ".join(_flags) + f" · **{t('Atributo 3','Trait 3')}:** {hdata['trait3']}")
 
     st.markdown("---")
 
@@ -175,7 +175,7 @@ with tab_calc:
 
         # Stars
         st.markdown(f"**⭐ {t('Estrelas','Stars')}**")
-        cur_leg = _leg_sel(t("Leg atual","Current leg"), "calc_cur_leg", 0)
+        cur_leg = _leg_sel(t("Perna atual","Current leg"), "calc_cur_leg", 0)
         show_star_image(cur_leg, _BASE, st)
 
         # Skills (one per skill)
@@ -212,7 +212,7 @@ with tab_calc:
 
         # Traits
         t_names = TRAIT_TYPE_NAMES_PT if lang == "pt" else TRAIT_TYPE_NAMES_EN
-        st.markdown(f"**🧬 {t('Traits','Traits')}**")
+        st.markdown(f"**🧬 {t('Atributos','Traits')}**")
         cur_traits = [
             st.number_input(f"{t_names[ti]} — {t('Atual','Current')}",
                             0, MAX_TRAIT_LEVEL, 0, key=f"calc_cur_tr_{ti}")
@@ -224,7 +224,7 @@ with tab_calc:
 
         # Stars
         st.markdown(f"**⭐ {t('Estrelas','Stars')}**")
-        tgt_leg = _leg_sel(t("Leg alvo","Target leg"), "calc_tgt_leg", MAX_LEGS)
+        tgt_leg = _leg_sel(t("Perna alvo","Target leg"), "calc_tgt_leg", MAX_LEGS)
         show_star_image(tgt_leg, _BASE, st)
 
         # Skills
@@ -260,7 +260,7 @@ with tab_calc:
             tgt_uw = 0
 
         # Traits
-        st.markdown(f"**🧬 {t('Traits','Traits')}**")
+        st.markdown(f"**🧬 {t('Atributos','Traits')}**")
         tgt_traits = [
             st.number_input(f"{t_names[ti]} — {t('Alvo','Target')}",
                             0, MAX_TRAIT_LEVEL, MAX_TRAIT_LEVEL, key=f"calc_tgt_tr_{ti}")
@@ -270,7 +270,7 @@ with tab_calc:
     # ── Validation ────────────────────────────────────────────────────────────
     errors = []
     if tgt_leg < cur_leg:
-        errors.append(t("⚠️ Leg alvo deve ser ≥ leg atual.", "⚠️ Target leg must be ≥ current leg."))
+        errors.append(t("⚠️ Perna alvo deve ser ≥ perna atual.", "⚠️ Target leg must be ≥ current leg."))
     for si in range(n_sk):
         if tgt_skills[si] < cur_skills[si]:
             errors.append(t(f"⚠️ Skill {si+1}: alvo deve ser ≥ atual.",
@@ -279,7 +279,7 @@ with tab_calc:
         errors.append(t("⚠️ Despertar: alvo deve ser ≥ atual.", "⚠️ Awakening: target must be ≥ current."))
     for ti in range(4):
         if tgt_traits[ti] < cur_traits[ti]:
-            errors.append(t(f"⚠️ Trait {t_names[ti]}: alvo deve ser ≥ atual.",
+            errors.append(t(f"⚠️ Atributo {t_names[ti]}: alvo deve ser ≥ atual.",
                             f"⚠️ Trait {t_names[ti]}: target must be ≥ current."))
     for e in errors:
         st.error(e)
@@ -324,9 +324,9 @@ with tab_calc:
             if hdata["has_uw"]:
                 _m(t("Frags. UW","UW Shards"),                   res["uw_shards"],   "⚔️")
             if res["trait_diamonds"] > 0:
-                _m(t("Diamantes (Traits)","Diamonds (Traits)"),  res["trait_diamonds"], "💎")
+                _m(t("Diamantes (Atributos)","Diamonds (Traits)"),  res["trait_diamonds"], "💎")
             if res["trait_shards"] > 0:
-                _m(t("Frags. de Trait","Trait Shards"),          res["trait_shards"],   "🧬")
+                _m(t("Frags. de Atributo","Trait Shards"),          res["trait_shards"],   "🧬")
 
             # Skill breakdown
             if any(tgt_skills[i] > cur_skills[i] for i in range(n_sk)):
@@ -344,7 +344,7 @@ with tab_calc:
 
             # Trait breakdown
             if any(tgt_traits[i] > cur_traits[i] for i in range(4)):
-                with st.expander(t("🧬 Detalhamento de Traits","🧬 Trait Breakdown")):
+                with st.expander(t("🧬 Detalhamento de Atributos","🧬 Trait Breakdown")):
                     tr_rows = []
                     for ti in range(4):
                         if tgt_traits[ti] > cur_traits[ti]:
@@ -352,7 +352,7 @@ with tab_calc:
                             tr_rows.append({
                                 t("Tipo","Type"):                 t_names[ti],
                                 t("De → Para","From → To"):       f"{cur_traits[ti]} → {tgt_traits[ti]}",
-                                t("💎 Diamantes","💎 Diamonds"):  dia if dia else "—",
+                                t("💎 Diamantes","💎 Diamonds"):   dia if dia else "—",
                                 t("🧬 Fragmentos","🧬 Shards"):   frags if frags else "—",
                             })
                     st.dataframe(pd.DataFrame(tr_rows), use_container_width=True, hide_index=True)
@@ -493,7 +493,7 @@ with tab_plan:
                 r   = entry["res"]
                 _q_rows.append({
                     t("Herói","Hero"):          f"{_tier_emoji(entry['tier'])} {entry['name']}",
-                    t("Leg","Leg"):             f"{entry['cur_leg']}→{entry['tgt_leg']}",
+                    t("Perna","Leg"):           f"{entry['cur_leg']}→{entry['tgt_leg']}",
                     t("⭐ Frags","⭐ Shards"):   r["star_shards"],
                     t("📚 Livros","📚 Books"):    r["skill_books"],
                     "💎 Awk":                   r["awk_shards"],
@@ -568,20 +568,22 @@ with tab_ref:
     with _r1:
         _rc1, _rc2 = st.columns(2)
         with _rc1:
-            st.subheader(t("⭐ Lendário — custo por leg","⭐ Legendary — cost per leg"))
+            st.subheader(t("⭐ Lendário — custo por perna","⭐ Legendary — cost per leg"))
             st.caption(t("Total: 500 fragmentos","Total: 500 shards"))
-            _ld = [{"Leg": i, t("Custo","Cost"): LEGENDARY_LEG_COSTS[i-1],
+            _leg_col = t("Perna","Leg")
+            _ld = [{_leg_col: i, t("Custo","Cost"): LEGENDARY_LEG_COSTS[i-1],
                     t("Acum.","Cum."): LEGENDARY_CUMUL[i]}
                    for i in range(1, MAX_LEGS + 1)]
-            st.dataframe(pd.DataFrame(_ld).set_index("Leg"),
+            st.dataframe(pd.DataFrame(_ld).set_index(_leg_col),
                          use_container_width=True, height=400)
         with _rc2:
-            st.subheader(t("⭐ Mítico — custo por leg","⭐ Mythic — cost per leg"))
+            st.subheader(t("⭐ Mítico — custo por perna","⭐ Mythic — cost per leg"))
             st.caption(t("Total: 1000 fragmentos","Total: 1000 shards"))
-            _md = [{"Leg": i, t("Custo","Cost"): MYTHIC_LEG_COSTS[i-1],
+            _leg_col2 = t("Perna","Leg")
+            _md = [{_leg_col2: i, t("Custo","Cost"): MYTHIC_LEG_COSTS[i-1],
                     t("Acum.","Cum."): MYTHIC_CUMUL[i]}
                    for i in range(1, MAX_LEGS + 1)]
-            st.dataframe(pd.DataFrame(_md).set_index("Leg"),
+            st.dataframe(pd.DataFrame(_md).set_index(_leg_col2),
                          use_container_width=True, height=400)
 
     with _r2:
