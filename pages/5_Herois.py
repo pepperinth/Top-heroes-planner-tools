@@ -459,7 +459,16 @@ with tab_plan:
 
     for qk in _Q_KEYS:
         q     = plan[qk]
-        qfac  = q["faction"]
+
+        # Resolve current faction using widget value to avoid one-frame icon lag
+        _q_fac_opts = [_fn(f) for f in _FACTIONS]
+        _widget_sel = st.session_state.get(f"q_fac_{qk}")
+        if _widget_sel is not None and _widget_sel in _q_fac_opts:
+            qfac = _FACTIONS[_q_fac_opts.index(_widget_sel)]
+            plan[qk]["faction"] = qfac
+        else:
+            qfac = q["faction"]
+
         hlist = q["heroes"]
 
         # Queue header
@@ -467,8 +476,7 @@ with tab_plan:
         with _qh1:
             _faction_icon(qfac, width=28)
         with _qh2:
-            _q_fac_opts  = [_fn(f) for f in _FACTIONS]
-            _q_fac_sel   = st.selectbox(
+            _q_fac_sel = st.selectbox(
                 f"**{qk} — {_Q_TYPES[qk]}** — {t('Facção','Faction')}",
                 _q_fac_opts,
                 index=_FACTIONS.index(qfac),

@@ -70,6 +70,7 @@ with tab_tools:
 
     col1, col2, col3 = st.columns(3, gap="large")
     col4, col5, col6 = st.columns(3, gap="large")
+    col7, col8, col9 = st.columns(3, gap="large")
 
     with col1:
         with st.container(border=True):
@@ -117,6 +118,17 @@ with tab_tools:
 
     with col5:
         with st.container(border=True):
+            st.subheader("👤 " + t("Calculadora de Heróis", "Hero Calculator"))
+            st.markdown(
+                "Calcula **fragmentos, livros de habilidade, soul stones, UW, espírito heroico e traits** para evoluir seus heróis. Planejador de filas Q1–Q5."
+                if lang == "pt" else
+                "Calculates **shards, skill books, soul stones, UW, heroic spirit and traits** to upgrade your heroes. Q1–Q5 queue planner."
+            )
+            st.page_link("pages/5_Herois.py",
+                         label="Abrir →" if lang == "pt" else "Open →")
+
+    with col6:
+        with st.container(border=True):
             st.subheader("🦕 " + t("Behemoth", "Behemoth"))
             st.markdown(
                 "Calcula **Magicite, Núcleos Mágicos e Selos** necessários para evoluir os níveis e estrelas do Behemoth."
@@ -126,7 +138,7 @@ with tab_tools:
             st.page_link("pages/6_Behemoth.py",
                          label="Abrir →" if lang == "pt" else "Open →")
 
-    with col6:
+    with col7:
         with st.container(border=True):
             st.subheader("⚙️ " + t("Lord Gear & Sacred Codex", "Lord Gear & Sacred Codex"))
             st.markdown(
