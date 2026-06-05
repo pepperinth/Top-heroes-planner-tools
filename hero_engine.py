@@ -135,17 +135,32 @@ SKILL_BOOK_CUMUL: list[int] = [sum(SKILL_BOOK_COSTS[:i+1]) for i in range(len(SK
 MAX_SKILL_LEVEL = len(SKILL_BOOK_COSTS) - 1  # 14 upgrades → level 15
 
 
-def books_for_skills(hero_name: str, from_level: int, to_level: int) -> int:
-    """Total books for one skill from_level → to_level (levels 1-15)."""
+def books_for_one_skill(from_level: int, to_level: int) -> int:
+    """Books for a single skill from_level → to_level (levels 1-15)."""
     f = max(0, min(from_level - 1, MAX_SKILL_LEVEL))
     t = max(0, min(to_level - 1, MAX_SKILL_LEVEL))
     return max(0, SKILL_BOOK_CUMUL[t] - SKILL_BOOK_CUMUL[f])
 
 
+def books_for_skills(hero_name: str, from_level: int, to_level: int) -> int:
+    """Total books for one skill (uniform levels) from_level → to_level."""
+    return books_for_one_skill(from_level, to_level)
+
+
 def total_books(hero_name: str, from_level: int, to_level: int) -> int:
-    """Total books for ALL skills of a hero."""
+    """Total books for ALL skills at the same level."""
     n_skills = HEROES[hero_name]["skills"]
-    return n_skills * books_for_skills(hero_name, from_level, to_level)
+    return n_skills * books_for_one_skill(from_level, to_level)
+
+
+def total_books_per_skill(hero_name: str,
+                          from_levels: list[int],
+                          to_levels: list[int]) -> int:
+    """Total books where each skill has its own from/to level."""
+    n = HEROES[hero_name]["skills"]
+    fl = (list(from_levels) + [1] * n)[:n]
+    tl = (list(to_levels)   + [1] * n)[:n]
+    return sum(books_for_one_skill(f, t) for f, t in zip(fl, tl))
 
 
 # ── Awakening (Legendary only) ────────────────────────────────────────────────
@@ -286,9 +301,11 @@ def calc_hero(
     # Stars
     from_leg: int = 0,
     to_leg: int = 0,
-    # Skills (uniform: same from/to for all skills)
+    # Skills — uniform or per-skill
     from_skill_lv: int = 1,
     to_skill_lv: int = 1,
+    from_skills: list[int] | None = None,  # per-skill (overrides from_skill_lv)
+    to_skills:   list[int] | None = None,  # per-skill (overrides to_skill_lv)
     # Awakening (step index 0-18)
     from_awk: int = 0,
     to_awk: int = 0,
@@ -311,8 +328,10 @@ def calc_hero(
         "faction":        hero["faction"],
         # Stars
         "star_shards":    shards_for_legs(tier, from_leg, to_leg),
-        # Skills
-        "skill_books":    total_books(hero_name, from_skill_lv, to_skill_lv),
+        # Skills (per-skill if provided, otherwise uniform)
+        "skill_books":    (total_books_per_skill(hero_name, from_skills, to_skills)
+                           if from_skills is not None and to_skills is not None
+                           else total_books(hero_name, from_skill_lv, to_skill_lv)),
         # Awakening
         "awk_shards":     0,
         "awk_ss":         0,
