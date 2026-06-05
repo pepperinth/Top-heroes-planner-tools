@@ -150,6 +150,14 @@ with tab_tools:
                          label="Abrir →" if lang == "pt" else "Open →")
 
     st.divider()
+    st.caption(
+        "🛈 Ferramenta não oficial criada pela comunidade. Os dados podem conter imprecisões. "
+        "Não somos afiliados à River Game HK Limited."
+        if lang == "pt" else
+        "🛈 Unofficial fan-made community tool. Data may be inaccurate. "
+        "Not affiliated with River Game HK Limited."
+    )
+
     st.subheader("🙏 " + t("Agradecimentos", "Acknowledgements"))
     st.markdown(
         """
@@ -158,6 +166,8 @@ Todas as informações foram retiradas do **Discord oficial do Top Heroes**.
 **Kami** — pela ajuda desde o início
 
 **Maaarcy** — pela ideia de integrar as calculadoras com os eventos regulares
+
+**Mazdie** — pelo suporte e contribuições à comunidade
 
 **Top Heroes Table** — Hyena
 
@@ -172,6 +182,8 @@ All information was sourced from the **official Top Heroes Discord**.
 **Kami** — for the help since the beginning
 
 **Maaarcy** — for the idea of integrating the calculators with the regular events
+
+**Mazdie** — for the support and contributions to the community
 
 **Top Heroes Table** — Hyena
 
