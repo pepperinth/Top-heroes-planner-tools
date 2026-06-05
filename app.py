@@ -165,11 +165,11 @@ Todas as informações foram retiradas do **Discord oficial do Top Heroes**.
 
 **Maaarcy** — pela ideia de integrar as calculadoras com os eventos regulares
 
-**Top Heroes Table** — Hyena
+**Top Heroes Table** — Hyena & **Mazdie**
 
 **Dragon Essence Brilliance Building Cost**
 Planilha criada por **Mixtape** & **Barad**.
-Mixtape, RegVed, PG Brotha, Cookie, Shootz, Maaarcy, Nomlette, Convex, Huddy, Mystiic, **Mazdie** — pelo excelente trabalho feito na moderação e coleta de dados.
+Mixtape, RegVed, PG Brotha, Cookie, Shootz, Maaarcy, Nomlette, Convex, Huddy, Mystiic — pelo excelente trabalho feito na moderação e coleta de dados.
 """
         if lang == "pt" else
         """
@@ -179,11 +179,11 @@ All information was sourced from the **official Top Heroes Discord**.
 
 **Maaarcy** — for the idea of integrating the calculators with the regular events
 
-**Top Heroes Table** — Hyena
+**Top Heroes Table** — Hyena & **Mazdie**
 
 **Dragon Essence Brilliance Building Cost**
 Spreadsheet created by **Mixtape** & **Barad**.
-Mixtape, RegVed, PG Brotha, Cookie, Shootz, Maaarcy, Nomlette, Convex, Huddy, Mystiic, **Mazdie** — for the excellent work in moderation and data collection.
+Mixtape, RegVed, PG Brotha, Cookie, Shootz, Maaarcy, Nomlette, Convex, Huddy, Mystiic — for the excellent work in moderation and data collection.
 """
     )
 
