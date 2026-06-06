@@ -14,6 +14,7 @@ from pet_engine import (
 )
 from events_data import EVENTS, get_milestone_status
 from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR
+from ui_utils import inject_global_css, section_header, FACTION_COLORS, RARITY_COLORS
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
@@ -57,6 +58,7 @@ _FS = {True: t("★ Exclusivo da Facção", "★ Faction-Specific"),
        None: "—"}
 
 # ── Header ─────────────────────────────────────────────────────────────────────
+inject_global_css()
 st.title("🐾 " + t("Calculadora de Pets", "Pet Calculator"))
 st.caption(t(
     "Calcula recursos necessários para evoluir e promover seus pets.",
@@ -209,7 +211,13 @@ with tab_calc:
         ))
 
     st.markdown("---")
-    st.markdown("**📌 " + t("Marcos de Tier — recursos restantes", "Tier Milestones — remaining resources") + "**")
+    _pet_fc = FACTION_COLORS.get(_FACTION_KEY.get(pet_faction, "Liga"), "#5C3D1E")
+    st.markdown(
+        f'<div style="border-left:5px solid {_pet_fc};padding:5px 14px;'
+        f'border-radius:0 8px 8px 0;background:{_pet_fc}14;font-weight:700;margin:8px 0 6px;">'
+        f'📌 {t("Marcos de Tier — recursos restantes","Tier Milestones — remaining resources")}</div>',
+        unsafe_allow_html=True,
+    )
     st.caption(t(
         "Quanto ainda falta a partir do seu estado atual para atingir cada tier.",
         "How much you still need from your current state to reach each tier.",

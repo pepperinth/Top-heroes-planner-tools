@@ -11,6 +11,7 @@ from events_data import (
     calc_task_points,
     get_milestone_status,
 )
+from ui_utils import inject_global_css
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -18,49 +19,7 @@ from events_data import (
 # ══════════════════════════════════════════════════════════════════════════════
 
 def _inject_css():
-    st.markdown("""
-    <style>
-    .ms-reached {
-        background: #217346; color: white;
-        border-radius: 6px; padding: 2px 10px;
-        font-weight: bold; font-size: 0.85em;
-    }
-    .ms-pending {
-        background: #f0f0f0; color: #cc0000;
-        border-radius: 6px; padding: 2px 10px;
-        font-size: 0.85em;
-    }
-    .pts-pill {
-        background: #D46B08; color: white;
-        border-radius: 12px; padding: 1px 10px;
-        font-weight: bold; font-size: 0.9em;
-        display: inline-block;
-    }
-    .calc-pill {
-        background: #4A7C59; color: white;
-        border-radius: 12px; padding: 1px 8px;
-        font-size: 0.82em;
-        display: inline-block;
-    }
-    .section-header {
-        background: #5C3D1E; color: white;
-        border-radius: 6px; padding: 6px 14px;
-        font-weight: bold; margin-bottom: 4px;
-    }
-    .grand-total {
-        background: #FF8C00; color: white;
-        border-radius: 8px; padding: 10px 18px;
-        font-size: 1.2em; font-weight: bold;
-        text-align: center; margin: 8px 0;
-    }
-    .sim-total {
-        background: #FFD700; color: #3B2A1A;
-        border-radius: 8px; padding: 8px 18px;
-        font-size: 1.1em; font-weight: bold;
-        text-align: center; margin: 6px 0;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    inject_global_css()
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -5,6 +5,7 @@ Run with:  streamlit run app.py
 
 import streamlit as st
 from events_tracker import render_events_tracker
+from ui_utils import inject_global_css
 
 st.set_page_config(
     page_title="Top Heroes Tools",
@@ -51,6 +52,7 @@ lang = st.session_state.lang
 def t(pt, en): return pt if lang == "pt" else en
 
 # ── Title ──────────────────────────────────────────────────────────────────────
+inject_global_css()
 st.title("🏆 Top Heroes" + t(" — Ferramentas", " — Tools"))
 
 # ── Main tabs ──────────────────────────────────────────────────────────────────

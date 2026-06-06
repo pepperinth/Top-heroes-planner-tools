@@ -15,6 +15,7 @@ from relic_optimizer import (
     compute_route, shards_needed,
 )
 from events_data import EVENTS, get_milestone_status
+from ui_utils import inject_global_css, section_header, results_header
 
 st.set_page_config(page_title="Relic Optimizer", page_icon="⚜️", layout="wide")
 
@@ -63,6 +64,7 @@ def _show_relic_star(star_str: str, leg_str: str):
     show_star_image(_relic_star_idx(star_str, leg_str), _BASE, st)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
+inject_global_css()
 st.title("⚜️ " + t("Otimizador de Relíquias", "Relic Optimizer"))
 st.caption(t("Calcula a rota de Martelo Milagroso para maximizar os níveis das relíquias.",
              "Calculates the Miracle Hammer route to maximise relic levels."))
@@ -218,7 +220,7 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
         st.info(t("Todas as relíquias alvo já atingiram a meta.", "All target relics already reached the goal."))
     else:
         # ── Results ────────────────────────────────────────────────────────────
-        st.subheader(t("✅ Resultado", "✅ Result"))
+        results_header(t("✅ Resultado", "✅ Result"))
 
         # Per-target summary
         res_rows = []

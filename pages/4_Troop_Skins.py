@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import streamlit as st
 import pandas as pd
 from events_data import EVENTS, get_milestone_status
+from ui_utils import inject_global_css, section_header, RARITY_COLORS
 
 st.set_page_config(page_title="Troop Skin Calculator", page_icon="🧢", layout="wide")
 
@@ -104,6 +105,7 @@ def next_milestone(best: int) -> int:
 
 
 # ── Header ─────────────────────────────────────────────────────────────────────
+inject_global_css()
 st.title("🧢 " + t("Calculadora de Troop Skin", "Troop Skin Calculator"))
 st.caption(t(
     "Planeje medalhas, tokens e o caminho até o nível máximo e Honor.",
@@ -214,7 +216,12 @@ with tab_calc:
 
     skin_copy_stock = skin_copies.get(skin, 0)
 
-    st.subheader("📊 " + t("Necessário para atingir o alvo", "Required to Reach Target"))
+    _rar_color = RARITY_COLORS.get(rarity, "#5C3D1E")
+    results_header = lambda lbl: st.markdown(
+        f'<div style="border-left:5px solid {_rar_color};padding:5px 14px;'
+        f'border-radius:0 8px 8px 0;background:{_rar_color}14;font-weight:700;margin:10px 0 6px;">{lbl}</div>',
+        unsafe_allow_html=True)
+    results_header(f"📊 {t('Necessário para atingir o alvo','Required to Reach Target')}")
     col_m, col_t = st.columns(2)
 
     with col_m:

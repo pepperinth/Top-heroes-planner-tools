@@ -24,6 +24,7 @@ from hero_engine import (
 )
 from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR, show_star_image
 from events_data import EVENTS, get_milestone_status
+from ui_utils import inject_global_css, section_header, results_header, FACTION_COLORS, TIER_COLORS, tier_badge
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
@@ -53,35 +54,9 @@ with st.sidebar:
 lang = st.session_state.lang
 def t(pt, en): return pt if lang == "pt" else en
 
-# ── Visual constants ───────────────────────────────────────────────────────────
-_FAC_COLOR  = {"Liga": "#4A90D9", "Horda": "#CC3333", "Natureza": "#33A04A"}
-_TIER_COLOR = {"Mythic": "#CC3333", "Legendary": "#C8A400"}
-
-def _inject_css():
-    st.markdown("""
-    <style>
-    .hero-info-banner {
-        border-radius: 0 8px 8px 0;
-        padding: 8px 14px;
-        margin: 6px 0 10px 0;
-    }
-    .tier-badge {
-        display: inline-block;
-        border-radius: 5px;
-        padding: 2px 10px;
-        font-weight: bold;
-        font-size: 0.85em;
-        color: white;
-        margin-right: 8px;
-    }
-    .queue-header {
-        border-radius: 0 6px 6px 0;
-        padding: 5px 12px;
-        margin-bottom: 4px;
-        font-weight: bold;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+# ── Visual constants (aliases from ui_utils) ──────────────────────────────────
+_FAC_COLOR  = FACTION_COLORS
+_TIER_COLOR = TIER_COLORS
 
 # ── Constants & helpers ────────────────────────────────────────────────────────
 _FAC_PT = {"Liga": "Liga",     "Horda": "Horda",  "Natureza": "Natureza"}
@@ -148,7 +123,7 @@ if "hero_plan_v2" not in st.session_state:
     }
 
 # ── Header ─────────────────────────────────────────────────────────────────────
-_inject_css()
+inject_global_css()
 st.title("👤 " + t("Calculadora de Heróis", "Hero Calculator"))
 st.caption(t(
     "Calcula fragmentos, livros de habilidade, soul stones, UW, espírito heroico e atributos.",
@@ -225,14 +200,22 @@ with tab_calc:
     _fc = _FAC_COLOR[faction]
     _tc = _TIER_COLOR[tier]
     st.markdown(
-        f'<div class="hero-info-banner" style="border-left:5px solid {_fc}; background:{_fc}11;">'
-        f'<span class="tier-badge" style="background:{_tc};">'
-        f'{_tier_emoji(tier)} {_tier_label(tier)}</span>'
+        f'<div class="th-banner" style="border-left:5px solid {_fc}; background:{_fc}11;">'
+        f'{tier_badge(tier, f"{_tier_emoji(tier)} {_tier_label(tier)}")}'
         f'<span style="color:#555; font-size:0.88em;">'
         f'{" · ".join(_flags)} · <b>{t("Atributo 3","Trait 3")}:</b> {hdata["trait3"]}</span>'
         f'</div>',
         unsafe_allow_html=True,
     )
+
+    # ── Adicionar à fila (seleção antecipada) ─────────────────────────────────
+    st.markdown(f"**📋 {t('Adicionar ao Planejador de Filas','Add to Queue Planner')}**")
+    _qa1, _qa2 = st.columns([2, 1])
+    with _qa1:
+        _q_dest = st.selectbox(t("Destino","Destination"), _Q_KEYS, key="calc_q_dest")
+    with _qa2:
+        _q_type_info = _Q_TYPES.get(_q_dest, "Regular")
+        st.caption(f"{_q_type_info} — {_fn(faction)}")
 
     st.markdown("---")
 
@@ -372,13 +355,7 @@ with tab_calc:
                       "Target matches current state. Nothing to calculate."))
         else:
             st.markdown("---")
-            # Faction-colored results header
-            st.markdown(
-                f'<div style="border-left:5px solid {_fc}; padding:4px 12px; '
-                f'border-radius:0 6px 6px 0; background:{_fc}11; margin-bottom:8px;">'
-                f'<b>📊 {t("Recursos Necessários","Resources Needed")}</b></div>',
-                unsafe_allow_html=True,
-            )
+            results_header(f"📊 {t('Recursos Necessários','Resources Needed')}", faction)
 
             _mc = st.columns(4)
             _ci = [0]
@@ -474,17 +451,7 @@ with tab_calc:
 
             # ── Adicionar à fila ───────────────────────────────────────────────
             st.markdown("---")
-            st.markdown("**📋 " + t("Adicionar ao Planejador de Filas","Add to Queue Planner") + "**")
-
-            _qa1, _qa2 = st.columns([2, 1])
-            with _qa1:
-                _q_dest = st.selectbox(t("Destino","Destination"),
-                                       _Q_KEYS, key="calc_q_dest")
-            with _qa2:
-                _q_type_info = _Q_TYPES.get(_q_dest, "Regular")
-                st.caption(f"{_q_type_info} — {_fn(faction)}")
-
-            if st.button("➕ " + t("Adicionar à fila","Add to queue"), key="calc_add_to_q"):
+            if st.button(f"➕ {t('Adicionar à fila','Add to queue')} → {_q_dest}", key="calc_add_to_q", type="primary"):
                 plan = st.session_state["hero_plan_v2"]
                 plan[_q_dest]["faction"] = faction
                 plan[_q_dest]["heroes"] = [

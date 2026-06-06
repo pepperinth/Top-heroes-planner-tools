@@ -18,6 +18,7 @@ from lord_gear_engine import (
     show_resource_image, show_codex_image,
 )
 from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR
+from ui_utils import inject_global_css, section_header, results_header, FACTION_COLORS
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
@@ -138,6 +139,7 @@ def _render_event_impact(rm: int, mt: int, ori: int, db: int, send_key: str):
                      "✅ Sent! Go to Regular Events to see the impact."))
 
 # ── Header ─────────────────────────────────────────────────────────────────────
+inject_global_css()
 st.title("⚙️ " + t("Equipamento do Lorde & Códex Sagrado", "Lord Gear & Sacred Codex"))
 st.caption(t(
     "Calcula Metal Refinado, Fio Mágico, Oricalco e Sangue de Dragão para evoluir o Equipamento do Lorde e o Códex Sagrado.",
@@ -250,7 +252,7 @@ with tab_calc:
             st.info(t("Nível e estrelas alvo iguais ao atual. Nada a calcular.",
                       "Target matches current state. Nothing to calculate."))
         else:
-            st.subheader("📊 " + t("Resumo de Recursos", "Resource Summary"))
+            results_header(f"📊 {t('Resumo de Recursos','Resource Summary')}", piece["faction"])
 
             # Total combined metrics
             mc1, mc2, mc3, mc4 = st.columns(4)
@@ -444,7 +446,7 @@ with tab_plan:
         st.info(t("Plano vazio. Adicione entradas acima.",
                   "Plan is empty. Add entries above."))
     else:
-        st.subheader("📋 " + t("Plano atual", "Current plan"))
+        section_header(f"📋 {t('Plano atual','Current plan')}")
 
         rows_tbl = []
         for i, e in enumerate(plan):

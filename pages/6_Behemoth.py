@@ -15,6 +15,7 @@ from behemoth_engine import (
     get_behemoth, show_star_image,
     calc_level_resources, calc_star_resources, calc_total,
 )
+from ui_utils import inject_global_css, section_header, results_header, FACTION_COLORS
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
@@ -105,6 +106,7 @@ def _render_metric_with_net(label: str, needed: int, inv: int):
             st.warning(msg)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
+inject_global_css()
 st.title("🦕 " + t("Calculadora de Behemoth", "Behemoth Calculator"))
 st.caption(t(
     "Calcula Magicite, Núcleos Mágicos e Selos necessários para evoluir seu Behemoth.",
@@ -210,7 +212,8 @@ with tab_calc:
             st.info(t("Nível e estrelas alvo iguais ao atual. Nada a calcular.",
                       "Target matches current state. Nothing to calculate."))
         else:
-            st.subheader("📊 " + t("Resumo de Recursos", "Resource Summary"))
+            _beh_fc = FACTION_COLORS.get(faction_key, "#5C3D1E")
+            results_header(f"📊 {t('Resumo de Recursos','Resource Summary')}", faction_key)
             mc1, mc2, mc3 = st.columns(3)
             with mc1:
                 _render_metric_with_net(
@@ -375,7 +378,7 @@ with tab_plan:
     if not plan:
         st.info(t("Plano vazio. Adicione Behemoths acima.", "Plan is empty. Add Behemoths above."))
     else:
-        st.subheader("📋 " + t("Plano atual", "Current plan"))
+        section_header(f"📋 {t('Plano atual','Current plan')}")
 
         rows_tbl = []
         for i, e in enumerate(plan):

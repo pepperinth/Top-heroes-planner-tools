@@ -35,6 +35,7 @@ from de_dust_engine import (
     RESEARCH_TIER_SLICES,
     research_max_levels, research_cost,
 )
+from ui_utils import inject_global_css
 
 st.set_page_config(page_title="DE & Dust Planner", page_icon="🏗️", layout="wide")
 
@@ -72,6 +73,7 @@ _BRK_DISPLAY = {
 _DISP_TO_EN = {v: k for k, v in _BRK_DISPLAY.items()}
 
 # ── Header ─────────────────────────────────────────────────────────────────────
+inject_global_css()
 st.title("🏗️ " + t("Planejador DE & Pó", "DE & Dust Planner"))
 st.caption(t(
     "Essência de Dragão (DE) · Pó de Dragão · Brilho (s108+)",
