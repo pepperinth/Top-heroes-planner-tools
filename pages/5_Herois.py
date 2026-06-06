@@ -53,6 +53,36 @@ with st.sidebar:
 lang = st.session_state.lang
 def t(pt, en): return pt if lang == "pt" else en
 
+# ── Visual constants ───────────────────────────────────────────────────────────
+_FAC_COLOR  = {"Liga": "#4A90D9", "Horda": "#CC3333", "Natureza": "#33A04A"}
+_TIER_COLOR = {"Mythic": "#CC3333", "Legendary": "#C8A400"}
+
+def _inject_css():
+    st.markdown("""
+    <style>
+    .hero-info-banner {
+        border-radius: 0 8px 8px 0;
+        padding: 8px 14px;
+        margin: 6px 0 10px 0;
+    }
+    .tier-badge {
+        display: inline-block;
+        border-radius: 5px;
+        padding: 2px 10px;
+        font-weight: bold;
+        font-size: 0.85em;
+        color: white;
+        margin-right: 8px;
+    }
+    .queue-header {
+        border-radius: 0 6px 6px 0;
+        padding: 5px 12px;
+        margin-bottom: 4px;
+        font-weight: bold;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
 # ── Constants & helpers ────────────────────────────────────────────────────────
 _FAC_PT = {"Liga": "Liga",     "Horda": "Horda",  "Natureza": "Natureza"}
 _FAC_EN = {"Liga": "League",   "Horda": "Horde",  "Natureza": "Nature"}
@@ -71,7 +101,6 @@ def _tier_emoji(tier: str) -> str:
 def _tier_label(tier: str) -> str:
     return t("Mítico", "Mythic") if tier == "Mythic" else t("Lendário", "Legendary")
 
-# Leg labels (0-75) — built once per render (lang-sensitive)
 _COLOR_PT = ["Amarela", "Vermelha", "Platinada"]
 _COLOR_EN = ["Yellow",  "Red",      "Platinum"]
 
@@ -84,8 +113,6 @@ def _leg_label(li: int) -> str:
     leg    = (li - 1) % 5 + 1
     return f"⭐{star} {color} · {leg}/5"
 
-_LEG_LABELS = [_leg_label(i) for i in range(MAX_LEGS + 1)]
-
 def _leg_sel(label: str, key: str, default: int = 0) -> int:
     idx = st.selectbox(label, range(MAX_LEGS + 1),
                        format_func=_leg_label, index=default, key=key)
@@ -95,6 +122,19 @@ def _awk_sel(label: str, key: str, default: int = 0) -> int:
     return st.selectbox(label, range(MAX_AWK_STEP + 1),
                         format_func=lambda i: AWK_STEP_LABELS[i],
                         index=default, key=key)
+
+def _show_leg_progress(leg_idx: int):
+    """Progress bar showing leg completion."""
+    pct = leg_idx / MAX_LEGS
+    if leg_idx > 0:
+        colors = _COLOR_PT if lang == "pt" else _COLOR_EN
+        sn = (leg_idx - 1) // 5 + 1
+        co = colors[(leg_idx - 1) // 25]
+        ln = (leg_idx - 1) % 5 + 1
+        txt = f"⭐{sn} {co} · {ln}/5  ({leg_idx}/{MAX_LEGS} {t('pernas','legs')})"
+    else:
+        txt = t(f"Sem estrelas (0/{MAX_LEGS})", f"No stars (0/{MAX_LEGS})")
+    st.progress(pct, text=txt)
 
 # ── Queue plan state ───────────────────────────────────────────────────────────
 _Q_KEYS  = ["Q1", "Q2", "Q3", "Q4", "Q5"]
@@ -108,6 +148,7 @@ if "hero_plan_v2" not in st.session_state:
     }
 
 # ── Header ─────────────────────────────────────────────────────────────────────
+_inject_css()
 st.title("👤 " + t("Calculadora de Heróis", "Hero Calculator"))
 st.caption(t(
     "Calcula fragmentos, livros de habilidade, soul stones, UW, espírito heroico e atributos.",
@@ -128,10 +169,10 @@ with tab_calc:
     # ── 1. Faction → Hero selection ───────────────────────────────────────────
     st.subheader("👤 " + t("Selecione o Herói", "Select Hero"))
 
-    fac_opts  = [_fn(f) for f in _FACTIONS]
-    fac_disp  = st.radio(t("Facção", "Faction"), fac_opts,
-                         horizontal=True, key="calc_fac_filter")
-    sel_fac   = _FACTIONS[fac_opts.index(fac_disp)]
+    fac_opts = [_fn(f) for f in _FACTIONS]
+    fac_disp = st.radio(t("Facção", "Faction"), fac_opts,
+                        horizontal=True, key="calc_fac_filter")
+    sel_fac  = _FACTIONS[fac_opts.index(fac_disp)]
 
     tier_opts = [t("Todos","All"), t("Mítico","Mythic"), t("Lendário","Legendary")]
     tier_filt = st.radio(t("Tier", "Tier"), tier_opts, horizontal=True, key="calc_tier_filter")
@@ -142,28 +183,56 @@ with tab_calc:
     elif tier_filt == t("Lendário","Legendary"):
         _pool = [h for h in _pool if HEROES[h]["tier"] == "Legendary"]
 
-    hi_c1, hi_c2 = st.columns([1, 5])
-    with hi_c1:
+    # Ensure selected hero is in current pool
+    if st.session_state.get("calc_hero_sel") not in _pool:
+        st.session_state["calc_hero_sel"] = _pool[0]
+
+    # Hero grid
+    _fac_color = _FAC_COLOR[sel_fac]
+    _hi1, _hi2 = st.columns([1, 11])
+    with _hi1:
         _faction_icon(sel_fac, width=36)
-    with hi_c2:
-        sel_hero = st.selectbox(t("Herói","Hero"), _pool, key="calc_hero_sel")
+    with _hi2:
+        _ncols = 4
+        for _row_start in range(0, len(_pool), _ncols):
+            _row_heroes = _pool[_row_start:_row_start + _ncols]
+            _row_cols   = st.columns(len(_row_heroes))
+            for _h, _hc in zip(_row_heroes, _row_cols):
+                with _hc:
+                    _selected = st.session_state.get("calc_hero_sel") == _h
+                    if st.button(
+                        f"{_tier_emoji(HEROES[_h]['tier'])} {_h}",
+                        key=f"hero_btn_{_h}",
+                        use_container_width=True,
+                        type="primary" if _selected else "secondary",
+                    ):
+                        st.session_state["calc_hero_sel"] = _h
+                        st.rerun()
 
-    hdata   = HEROES[sel_hero]
-    tier    = hdata["tier"]
-    faction = hdata["faction"]
-    n_sk    = hdata["skills"]
+    sel_hero = st.session_state["calc_hero_sel"]
+    hdata    = HEROES[sel_hero]
+    tier     = hdata["tier"]
+    faction  = hdata["faction"]
+    n_sk     = hdata["skills"]
+    t_names  = TRAIT_TYPE_NAMES_PT if lang == "pt" else TRAIT_TYPE_NAMES_EN
 
-    # Hero info strip
-    _inf1, _inf2 = st.columns([1, 5])
-    with _inf1:
-        st.markdown(f"**{_tier_emoji(tier)} {_tier_label(tier)}**")
-    with _inf2:
-        _flags = []
-        if hdata["has_hs"]:  _flags.append(t("✨ Espírito Heroico","✨ Heroic Spirit"))
-        if hdata["has_uw"]:  _flags.append(t("⚔️ UW","⚔️ UW"))
-        if tier == "Legendary": _flags.append(t("💎 Despertar","💎 Awakening"))
-        _flags.append(f"{n_sk} {t('skills','skills')}")
-        st.caption(" · ".join(_flags) + f" · **{t('Atributo 3','Trait 3')}:** {hdata['trait3']}")
+    # Hero info banner with faction color
+    _flags = []
+    if hdata["has_hs"]:      _flags.append(t("✨ Espírito Heroico","✨ Heroic Spirit"))
+    if hdata["has_uw"]:      _flags.append(t("⚔️ UW","⚔️ UW"))
+    if tier == "Legendary":  _flags.append(t("💎 Despertar","💎 Awakening"))
+    _flags.append(f"{n_sk} skills")
+    _fc = _FAC_COLOR[faction]
+    _tc = _TIER_COLOR[tier]
+    st.markdown(
+        f'<div class="hero-info-banner" style="border-left:5px solid {_fc}; background:{_fc}11;">'
+        f'<span class="tier-badge" style="background:{_tc};">'
+        f'{_tier_emoji(tier)} {_tier_label(tier)}</span>'
+        f'<span style="color:#555; font-size:0.88em;">'
+        f'{" · ".join(_flags)} · <b>{t("Atributo 3","Trait 3")}:</b> {hdata["trait3"]}</span>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
 
     st.markdown("---")
 
@@ -177,8 +246,9 @@ with tab_calc:
         st.markdown(f"**⭐ {t('Estrelas','Stars')}**")
         cur_leg = _leg_sel(t("Perna atual","Current leg"), "calc_cur_leg", 0)
         show_star_image(cur_leg, _BASE, st)
+        _show_leg_progress(cur_leg)
 
-        # Skills (one per skill)
+        # Skills
         st.markdown(f"**📚 {t('Skills (por habilidade)','Skills (per ability)')}**")
         cur_skills = []
         for si in range(n_sk):
@@ -189,35 +259,34 @@ with tab_calc:
 
         # Awakening
         if tier == "Legendary":
-            st.markdown(f"**💎 {t('Despertar','Awakening')}**")
-            cur_awk = _awk_sel(t("Estágio atual","Current stage"), "calc_cur_awk", 0)
+            with st.expander(f"💎 {t('Despertar','Awakening')}", expanded=True):
+                cur_awk = _awk_sel(t("Estágio atual","Current stage"), "calc_cur_awk", 0)
         else:
             cur_awk = 0
 
         # Heroic Spirit
         if hdata["has_hs"]:
-            st.markdown(f"**✨ {t('Espírito Heroico','Heroic Spirit')}**")
-            cur_hs = st.number_input(t("Nível atual (0-100)","Current level (0-100)"),
-                                     0, MAX_HS_LEVEL, 0, key="calc_cur_hs")
+            with st.expander(f"✨ {t('Espírito Heroico','Heroic Spirit')}", expanded=True):
+                cur_hs = st.number_input(t("Nível atual (0-100)","Current level (0-100)"),
+                                         0, MAX_HS_LEVEL, 0, key="calc_cur_hs")
         else:
             cur_hs = 0
 
         # UW
         if hdata["has_uw"]:
-            st.markdown(f"**⚔️ {t('Equip. Exclusivo (UW)','Exclusive Weapon (UW)')}**")
-            cur_uw = st.number_input(t("Nível atual UW (0-20)","Current UW level (0-20)"),
-                                     0, MAX_UW_LEVEL, 0, key="calc_cur_uw")
+            with st.expander(f"⚔️ {t('Equip. Exclusivo (UW)','Exclusive Weapon (UW)')}", expanded=True):
+                cur_uw = st.number_input(t("Nível atual UW (0-20)","Current UW level (0-20)"),
+                                         0, MAX_UW_LEVEL, 0, key="calc_cur_uw")
         else:
             cur_uw = 0
 
         # Traits
-        t_names = TRAIT_TYPE_NAMES_PT if lang == "pt" else TRAIT_TYPE_NAMES_EN
-        st.markdown(f"**🧬 {t('Atributos','Traits')}**")
-        cur_traits = [
-            st.number_input(f"{t_names[ti]} — {t('Atual','Current')}",
-                            0, MAX_TRAIT_LEVEL, 0, key=f"calc_cur_tr_{ti}")
-            for ti in range(4)
-        ]
+        with st.expander(f"🧬 {t('Atributos','Traits')}", expanded=False):
+            cur_traits = [
+                st.number_input(f"{t_names[ti]} — {t('Atual','Current')}",
+                                0, MAX_TRAIT_LEVEL, 0, key=f"calc_cur_tr_{ti}")
+                for ti in range(4)
+            ]
 
     with col_tgt:
         st.subheader("🎯 " + t("Estado Alvo", "Target State"))
@@ -226,6 +295,7 @@ with tab_calc:
         st.markdown(f"**⭐ {t('Estrelas','Stars')}**")
         tgt_leg = _leg_sel(t("Perna alvo","Target leg"), "calc_tgt_leg", MAX_LEGS)
         show_star_image(tgt_leg, _BASE, st)
+        _show_leg_progress(tgt_leg)
 
         # Skills
         st.markdown(f"**📚 {t('Skills (por habilidade)','Skills (per ability)')}**")
@@ -238,34 +308,34 @@ with tab_calc:
 
         # Awakening
         if tier == "Legendary":
-            st.markdown(f"**💎 {t('Despertar','Awakening')}**")
-            tgt_awk = _awk_sel(t("Estágio alvo","Target stage"), "calc_tgt_awk", MAX_AWK_STEP)
+            with st.expander(f"💎 {t('Despertar','Awakening')}", expanded=True):
+                tgt_awk = _awk_sel(t("Estágio alvo","Target stage"), "calc_tgt_awk", MAX_AWK_STEP)
         else:
             tgt_awk = 0
 
         # Heroic Spirit
         if hdata["has_hs"]:
-            st.markdown(f"**✨ {t('Espírito Heroico','Heroic Spirit')}**")
-            tgt_hs = st.number_input(t("Nível alvo (0-100)","Target level (0-100)"),
-                                     0, MAX_HS_LEVEL, MAX_HS_LEVEL, key="calc_tgt_hs")
+            with st.expander(f"✨ {t('Espírito Heroico','Heroic Spirit')}", expanded=True):
+                tgt_hs = st.number_input(t("Nível alvo (0-100)","Target level (0-100)"),
+                                         0, MAX_HS_LEVEL, MAX_HS_LEVEL, key="calc_tgt_hs")
         else:
             tgt_hs = 0
 
         # UW
         if hdata["has_uw"]:
-            st.markdown(f"**⚔️ {t('Equip. Exclusivo (UW)','Exclusive Weapon (UW)')}**")
-            tgt_uw = st.number_input(t("Nível alvo UW (0-20)","Target UW level (0-20)"),
-                                     0, MAX_UW_LEVEL, MAX_UW_LEVEL, key="calc_tgt_uw")
+            with st.expander(f"⚔️ {t('Equip. Exclusivo (UW)','Exclusive Weapon (UW)')}", expanded=True):
+                tgt_uw = st.number_input(t("Nível alvo UW (0-20)","Target UW level (0-20)"),
+                                         0, MAX_UW_LEVEL, MAX_UW_LEVEL, key="calc_tgt_uw")
         else:
             tgt_uw = 0
 
         # Traits
-        st.markdown(f"**🧬 {t('Atributos','Traits')}**")
-        tgt_traits = [
-            st.number_input(f"{t_names[ti]} — {t('Alvo','Target')}",
-                            0, MAX_TRAIT_LEVEL, MAX_TRAIT_LEVEL, key=f"calc_tgt_tr_{ti}")
-            for ti in range(4)
-        ]
+        with st.expander(f"🧬 {t('Atributos','Traits')}", expanded=False):
+            tgt_traits = [
+                st.number_input(f"{t_names[ti]} — {t('Alvo','Target')}",
+                                0, MAX_TRAIT_LEVEL, MAX_TRAIT_LEVEL, key=f"calc_tgt_tr_{ti}")
+                for ti in range(4)
+            ]
 
     # ── Validation ────────────────────────────────────────────────────────────
     errors = []
@@ -302,7 +372,13 @@ with tab_calc:
                       "Target matches current state. Nothing to calculate."))
         else:
             st.markdown("---")
-            st.subheader("📊 " + t("Recursos Necessários", "Resources Needed"))
+            # Faction-colored results header
+            st.markdown(
+                f'<div style="border-left:5px solid {_fc}; padding:4px 12px; '
+                f'border-radius:0 6px 6px 0; background:{_fc}11; margin-bottom:8px;">'
+                f'<b>📊 {t("Recursos Necessários","Resources Needed")}</b></div>',
+                unsafe_allow_html=True,
+            )
 
             _mc = st.columns(4)
             _ci = [0]
@@ -314,19 +390,19 @@ with tab_calc:
 
             _shard_lbl = (t("Frags. Míticos","Mythic Shards")
                           if tier == "Mythic" else t("Frags. Lendários","Legendary Shards"))
-            _m(_shard_lbl,                         res["star_shards"],    "⭐")
-            _m(t("Livros de Habilidade","Skill Books"), res["skill_books"], "📚")
+            _m(_shard_lbl,                                     res["star_shards"],    "⭐")
+            _m(t("Livros de Habilidade","Skill Books"),         res["skill_books"],    "📚")
             if tier == "Legendary":
-                _m(t("Frags. (Despertar)","Shards (Awakening)"), res["awk_shards"], "💎")
-                _m(f"Soul Stones ({_fn(faction)})",              res["awk_ss"],     "💠")
+                _m(t("Frags. (Despertar)","Shards (Awakening)"), res["awk_shards"],   "💎")
+                _m(f"Soul Stones ({_fn(faction)})",               res["awk_ss"],       "💠")
             if hdata["has_hs"]:
                 _m(t("Frags. Esp. Heroico","Heroic Spirit Shards"), res["hs_shards"], "✨")
             if hdata["has_uw"]:
-                _m(t("Frags. UW","UW Shards"),                   res["uw_shards"],   "⚔️")
+                _m(t("Frags. UW","UW Shards"),                   res["uw_shards"],    "⚔️")
             if res["trait_diamonds"] > 0:
-                _m(t("Diamantes (Atributos)","Diamonds (Traits)"),  res["trait_diamonds"], "💎")
+                _m(t("Diamantes (Atributos)","Diamonds (Traits)"), res["trait_diamonds"], "💎")
             if res["trait_shards"] > 0:
-                _m(t("Frags. de Atributo","Trait Shards"),          res["trait_shards"],   "🧬")
+                _m(t("Frags. de Atributo","Trait Shards"),         res["trait_shards"],   "🧬")
 
             # Skill breakdown
             if any(tgt_skills[i] > cur_skills[i] for i in range(n_sk)):
@@ -336,9 +412,9 @@ with tab_calc:
                         bk = books_for_one_skill(cur_skills[si], tgt_skills[si])
                         if bk > 0:
                             sk_rows.append({
-                                t("Skill","Skill"):       f"Skill {si+1}",
-                                t("De → Para","From → To"): f"Lv{cur_skills[si]} → Lv{tgt_skills[si]}",
-                                t("📚 Livros","📚 Books"): bk,
+                                t("Skill","Skill"):          f"Skill {si+1}",
+                                t("De → Para","From → To"):  f"Lv{cur_skills[si]} → Lv{tgt_skills[si]}",
+                                t("📚 Livros","📚 Books"):    bk,
                             })
                     st.dataframe(pd.DataFrame(sk_rows), use_container_width=True, hide_index=True)
 
@@ -350,10 +426,10 @@ with tab_calc:
                         if tgt_traits[ti] > cur_traits[ti]:
                             dia, frags = trait_cost(ti, cur_traits[ti], tgt_traits[ti])
                             tr_rows.append({
-                                t("Tipo","Type"):                 t_names[ti],
-                                t("De → Para","From → To"):       f"{cur_traits[ti]} → {tgt_traits[ti]}",
-                                t("💎 Diamantes","💎 Diamonds"):   dia if dia else "—",
-                                t("🧬 Fragmentos","🧬 Shards"):   frags if frags else "—",
+                                t("Tipo","Type"):               t_names[ti],
+                                t("De → Para","From → To"):     f"{cur_traits[ti]} → {tgt_traits[ti]}",
+                                t("💎 Diamantes","💎 Diamonds"): dia if dia else "—",
+                                t("🧬 Fragmentos","🧬 Shards"):  frags if frags else "—",
                             })
                     st.dataframe(pd.DataFrame(tr_rows), use_container_width=True, hide_index=True)
 
@@ -410,9 +486,7 @@ with tab_calc:
 
             if st.button("➕ " + t("Adicionar à fila","Add to queue"), key="calc_add_to_q"):
                 plan = st.session_state["hero_plan_v2"]
-                # Set faction of destination queue to match hero's faction
                 plan[_q_dest]["faction"] = faction
-                # Remove existing entry for same hero in same queue
                 plan[_q_dest]["heroes"] = [
                     e for e in plan[_q_dest]["heroes"] if e["name"] != sel_hero
                 ]
@@ -450,7 +524,6 @@ with tab_plan:
 
     plan = st.session_state["hero_plan_v2"]
 
-    # Grand totals
     grand: dict = {
         "star_my": 0, "star_le": 0, "skill_books": 0,
         "awk_sh": 0, "ss_liga": 0, "ss_horda": 0, "ss_nat": 0,
@@ -458,9 +531,9 @@ with tab_plan:
     }
 
     for qk in _Q_KEYS:
-        q     = plan[qk]
+        q = plan[qk]
 
-        # Resolve current faction using widget value to avoid one-frame icon lag
+        # Resolve current faction without one-frame lag
         _q_fac_opts = [_fn(f) for f in _FACTIONS]
         _widget_sel = st.session_state.get(f"q_fac_{qk}")
         if _widget_sel is not None and _widget_sel in _q_fac_opts:
@@ -471,16 +544,24 @@ with tab_plan:
 
         hlist = q["heroes"]
 
-        # Queue header
+        # Faction-colored queue header
+        _qfc = _FAC_COLOR[qfac]
         _qh1, _qh2 = st.columns([1, 9])
         with _qh1:
             _faction_icon(qfac, width=28)
         with _qh2:
+            st.markdown(
+                f'<div class="queue-header" style="border-left:4px solid {_qfc}; '
+                f'background:{_qfc}11;">'
+                f'{qk} — {_Q_TYPES[qk]}</div>',
+                unsafe_allow_html=True,
+            )
             _q_fac_sel = st.selectbox(
-                f"**{qk} — {_Q_TYPES[qk]}** — {t('Facção','Faction')}",
+                t("Facção","Faction"),
                 _q_fac_opts,
                 index=_FACTIONS.index(qfac),
                 key=f"q_fac_{qk}",
+                label_visibility="collapsed",
             )
             plan[qk]["faction"] = _FACTIONS[_q_fac_opts.index(_q_fac_sel)]
 
@@ -490,18 +571,17 @@ with tab_plan:
         else:
             _q_rows = []
             for entry in hlist:
-                r   = entry["res"]
+                r = entry["res"]
                 _q_rows.append({
-                    t("Herói","Hero"):          f"{_tier_emoji(entry['tier'])} {entry['name']}",
-                    t("Perna","Leg"):           f"{entry['cur_leg']}→{entry['tgt_leg']}",
-                    t("⭐ Frags","⭐ Shards"):   r["star_shards"],
-                    t("📚 Livros","📚 Books"):    r["skill_books"],
-                    "💎 Awk":                   r["awk_shards"],
-                    "💠 SS":                    r["awk_ss"],
-                    "✨ HS":                    r["hs_shards"],
-                    "⚔️ UW":                    r["uw_shards"],
+                    t("Herói","Hero"):        f"{_tier_emoji(entry['tier'])} {entry['name']}",
+                    t("Perna","Leg"):         f"{entry['cur_leg']}→{entry['tgt_leg']}",
+                    t("⭐ Frags","⭐ Shards"): r["star_shards"],
+                    t("📚 Livros","📚 Books"): r["skill_books"],
+                    "💎 Awk":                 r["awk_shards"],
+                    "💠 SS":                  r["awk_ss"],
+                    "✨ HS":                  r["hs_shards"],
+                    "⚔️ UW":                  r["uw_shards"],
                 })
-                # Accumulate grand totals
                 tier_h = entry["tier"]
                 fac_h  = entry["faction"]
                 if tier_h == "Mythic":
@@ -513,14 +593,13 @@ with tab_plan:
                 grand["uw_sh"]       += r["uw_shards"]
                 grand["trait_dia"]   += r["trait_diamonds"]
                 grand["trait_sh"]    += r["trait_shards"]
-                if fac_h == "Liga":   grand["ss_liga"]  += r["awk_ss"]
-                elif fac_h == "Horda":  grand["ss_horda"] += r["awk_ss"]
-                else:                   grand["ss_nat"]   += r["awk_ss"]
+                if fac_h == "Liga":    grand["ss_liga"]  += r["awk_ss"]
+                elif fac_h == "Horda": grand["ss_horda"] += r["awk_ss"]
+                else:                  grand["ss_nat"]   += r["awk_ss"]
 
             df_q = pd.DataFrame(_q_rows)
             st.dataframe(df_q, use_container_width=True, hide_index=True)
 
-            # Remove individual hero
             _del_h = st.selectbox(t("Remover herói","Remove hero"),
                                   ["—"] + [e["name"] for e in hlist],
                                   key=f"q_del_{qk}")
