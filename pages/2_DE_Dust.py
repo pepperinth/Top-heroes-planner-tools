@@ -80,6 +80,49 @@ st.caption(t(
     "Dragon Essence (DE) · Dragon Dust · Brilliance (s108+)",
 ))
 
+# ── DICAS ─────────────────────────────────────────────────────────────────────
+with st.expander("💡 " + t("Dicas — Como conseguir 1k+ DE+Pó por ciclo F2P", "Tips — How to get 1k+ DE+Dust per F2P cycle"), expanded=False):
+    st.markdown(f"**{t('Como conseguir mais de 1k de DE+Pó a cada duas semanas como F2P','How to get 1k+ DE+Dust every two weeks as F2P')}**")
+    st.caption(t("Fontes aproximadas por ciclo bissemanal de eventos/lojas.", "Approximate bi-weekly event/store cycle sources."))
+
+    _src_col = t("Fonte", "Source")
+    _de_col  = "DE"
+    _du_col  = t("Pó", "Dust")
+
+    _tips_rows = [
+        {_src_col: "Black Dragon / Yeti",                                    _de_col: 100, _du_col: 100},
+        {_src_col: "Guild Honor Store",                                       _de_col: 35,  _du_col: 35 },
+        {_src_col: "Trade Store",                                             _de_col: 30,  _du_col: None},
+        {_src_col: "Guild Store",                                             _de_col: None,_du_col: 35 },
+        {_src_col: t("Mines Milestones","Mines Milestones"),                  _de_col: 30,  _du_col: None},
+        {_src_col: t("Essence Workshop","Essence Workshop"),                  _de_col: 49,  _du_col: None},
+        {_src_col: t("Rush event Milestones","Rush event Milestones"),        _de_col: 75,  _du_col: 75 },
+        {_src_col: t("Privilégio Permanente (opcional)","Permanent Privilege (optional)"), _de_col: 10, _du_col: None},
+    ]
+
+    _display_rows = [
+        {_src_col: r[_src_col],
+         _de_col:  r[_de_col]  if r[_de_col]  is not None else "—",
+         _du_col:  r[_du_col]  if r[_du_col]  is not None else "—"}
+        for r in _tips_rows
+    ]
+    st.dataframe(pd.DataFrame(_display_rows), use_container_width=True, hide_index=True)
+
+    _total_de    = sum(r[_de_col] for r in _tips_rows if r[_de_col] is not None)
+    _total_du    = sum(r[_du_col] for r in _tips_rows if r[_du_col] is not None)
+    _total_de_f2p = _total_de - 10
+    _tc1, _tc2, _tc3 = st.columns(3)
+    _tc1.metric(t("Total DE (com priv.)", "Total DE (with priv.)"),       f"{_total_de}")
+    _tc2.metric(t("Total DE F2P (sem priv.)", "Total DE F2P (no priv.)"), f"{_total_de_f2p}")
+    _tc3.metric(t("Total Pó", "Total Dust"),                              f"{_total_du}")
+
+    st.info(t(
+        "ⓘ **Privilégio Permanente** — Disponível a partir da **S3**. Recurso **pago** e opcional — "
+        "não é acessível a todos os jogadores.",
+        "ⓘ **Permanent Privilege** — Available from **S3** onwards. **Paid** and optional feature — "
+        "not available to all players.",
+    ))
+
 # ── INVENTÁRIO ─────────────────────────────────────────────────────────────────
 with st.expander(t("📦 Inventário de Recursos", "📦 Resource Inventory"), expanded=True):
     c1, c2, c3 = st.columns(3)
@@ -443,7 +486,6 @@ res_tabs = st.tabs([
     "⚔️ " + t("Facção", "Faction"),
     "🐉 Awakening",
     "S2", "S3", "S4",
-    "💡 " + t("Dicas", "Tips"),
 ])
 res_totals = {}   # tree_key → dust cost
 
@@ -809,65 +851,3 @@ if conv_rate > 0 and priority == _prio_res and eff_de_balance < 0:
         t(f"⚠️ Priorizando pesquisa, faltam **{abs(eff_de_balance):,} DE** para construções.",
           f"⚠️ Prioritizing research leaves **{abs(eff_de_balance):,} DE** short for buildings.")
     )
-
-# ── DICAS ──────────────────────────────────────────────────────────────────────
-with res_tabs[6]:
-    st.subheader(t(
-        "💡 Como conseguir mais de 1k de DE+Pó a cada duas semanas como F2P",
-        "💡 How to get 1k+ DE+Dust every two weeks as F2P",
-    ))
-    st.caption(t(
-        "Fontes bissemanas aproximadas (por ciclo de evento/loja).",
-        "Approximate bi-weekly sources (per event/store cycle).",
-    ))
-
-    _src_col = t("Fonte", "Source")
-    _de_col  = "DE"
-    _du_col  = t("Pó", "Dust")
-
-    _tips_rows = [
-        {_src_col: "Black Dragon / Yeti",          _de_col: 100, _du_col: 100},
-        {_src_col: t("Guild Honor Store","Guild Honor Store"), _de_col: 35,  _du_col: 35},
-        {_src_col: t("Trade Store","Trade Store"),  _de_col: 30,  _du_col: None},
-        {_src_col: t("Guild Store","Guild Store"),  _de_col: None, _du_col: 35},
-        {_src_col: t("Mines Milestones","Mines Milestones"), _de_col: 30, _du_col: None},
-        {_src_col: t("Essence Workshop","Essence Workshop"), _de_col: 49, _du_col: None},
-        {_src_col: t("Rush event Milestones","Rush event Milestones"), _de_col: 75, _du_col: 75},
-        {_src_col: t("Privilégio Permanente ⓘ","Permanent Privilege ⓘ"), _de_col: 10, _du_col: None},
-    ]
-
-    # Replace None with "—" for display
-    _display_rows = [
-        {
-            _src_col: r[_src_col],
-            _de_col:  r[_de_col]  if r[_de_col]  is not None else "—",
-            _du_col:  r[_du_col]  if r[_du_col]  is not None else "—",
-        }
-        for r in _tips_rows
-    ]
-
-    st.dataframe(
-        pd.DataFrame(_display_rows),
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            _de_col: st.column_config.TextColumn(_de_col),
-            _du_col: st.column_config.TextColumn(_du_col),
-        },
-    )
-
-    _total_de  = sum(r[_de_col]  for r in _tips_rows if r[_de_col]  is not None)
-    _total_du  = sum(r[_du_col]  for r in _tips_rows if r[_du_col]  is not None)
-    _total_de_fp2 = _total_de - 10   # sem o Privilégio Permanente
-
-    _tc1, _tc2, _tc3 = st.columns(3)
-    _tc1.metric(t("Total DE (com priv.)", "Total DE (with priv.)"), f"{_total_de}")
-    _tc2.metric(t("Total DE F2P (sem priv.)", "Total DE F2P (no priv.)"), f"{_total_de_fp2}")
-    _tc3.metric(t("Total Pó", "Total Dust"), f"{_total_du}")
-
-    st.info(t(
-        "ⓘ **Privilégio Permanente** — Disponível a partir da S3. "
-        "Recurso **pago** (opcional). Marcado como opcional pois não é acessível a todos os jogadores.",
-        "ⓘ **Permanent Privilege** — Available from S3 onwards. "
-        "**Paid** feature (optional). Listed as optional since it is not available to all players.",
-    ))
