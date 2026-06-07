@@ -95,7 +95,7 @@ with st.expander("💡 " + t("Dicas — Como conseguir 1k+ DE+Pó por ciclo F2P"
 
     # (source_pt, source_en, freq_pt, freq_en, de, dust, note_pt, note_en, is_optional)
     _tips_data = [
-        ("Black Dragon / Yeti (loja)",
+        ("Dragão Negro / Yeti (loja)",
          "Black Dragon / Yeti (store)",
          "2× por ciclo (a cada 2 sem.)",
          "2× per cycle (every 2 wks)",
