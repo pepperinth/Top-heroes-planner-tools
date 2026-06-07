@@ -83,44 +83,106 @@ st.caption(t(
 # ── DICAS ─────────────────────────────────────────────────────────────────────
 with st.expander("💡 " + t("Dicas — Como conseguir 1k+ DE+Pó por ciclo F2P", "Tips — How to get 1k+ DE+Dust per F2P cycle"), expanded=False):
     st.markdown(f"**{t('Como conseguir mais de 1k de DE+Pó a cada duas semanas como F2P','How to get 1k+ DE+Dust every two weeks as F2P')}**")
-    st.caption(t("Fontes aproximadas por ciclo bissemanal de eventos/lojas.", "Approximate bi-weekly event/store cycle sources."))
+    st.caption(t(
+        "Valores calculados para um ciclo de **14 dias**, considerando a sexta-feira da corrida da guilda como referência.",
+        "Values calculated for a **14-day** cycle, using the guild race Friday as reference.",
+    ))
 
-    _src_col = t("Fonte", "Source")
-    _de_col  = "DE"
-    _du_col  = t("Pó", "Dust")
+    _src_col  = t("Fonte", "Source")
+    _freq_col = t("Frequência", "Frequency")
+    _de_col   = "DE"
+    _du_col   = t("Pó", "Dust")
 
-    _tips_rows = [
-        {_src_col: "Black Dragon / Yeti",                                    _de_col: 100, _du_col: 100},
-        {_src_col: "Guild Honor Store",                                       _de_col: 35,  _du_col: 35 },
-        {_src_col: "Trade Store",                                             _de_col: 30,  _du_col: None},
-        {_src_col: "Guild Store",                                             _de_col: None,_du_col: 35 },
-        {_src_col: t("Mines Milestones","Mines Milestones"),                  _de_col: 30,  _du_col: None},
-        {_src_col: t("Essence Workshop","Essence Workshop"),                  _de_col: 49,  _du_col: None},
-        {_src_col: t("Rush event Milestones","Rush event Milestones"),        _de_col: 75,  _du_col: 75 },
-        {_src_col: t("Privilégio Permanente (opcional)","Permanent Privilege (optional)"), _de_col: 10, _du_col: None},
+    # (source_pt, source_en, frequency_pt, frequency_en, de_per_cycle, dust_per_cycle, note_pt, note_en)
+    _tips_data = [
+        ("Black Dragon / Yeti",
+         "Black Dragon / Yeti",
+         "2× por ciclo (a cada 2 sem.)",
+         "2× per cycle (every 2 wks)",
+         200, 200,
+         "Loja aparece a cada 2 semanas — coincide com as duas sextas do ciclo.",
+         "Store appears every 2 weeks — matches both Fridays of the cycle."),
+        ("Loja de Honra da Guilda",
+         "Guild Honor Store",
+         "Semanal (2×)",
+         "Weekly (2×)",
+         70, 70,
+         "", ""),
+        ("Loja de Troca",
+         "Trade Store",
+         "Semanal (2×)",
+         "Weekly (2×)",
+         60, None,
+         "", ""),
+        ("Loja da Guilda",
+         "Guild Store",
+         "Semanal (2×)",
+         "Weekly (2×)",
+         None, 70,
+         "", ""),
+        ("Marcos das Minas",
+         "Mines Milestones",
+         "Semanal (2×)",
+         "Weekly (2×)",
+         60, None,
+         "", ""),
+        ("Oficina de Essência",
+         "Essence Workshop",
+         "Diário (mín. 7/dia × 14)",
+         "Daily (min. 7/day × 14)",
+         98, None,
+         "Mínimo de 7 por dia. Valor pode ser maior dependendo da atividade.",
+         "Minimum 7 per day. Value may be higher depending on activity."),
+        ("Rush event — Lord Gear",
+         "Rush event — Lord Gear",
+         "2× por ciclo (a cada 2 sem.)",
+         "2× per cycle (every 2 wks)",
+         150, 150,
+         "Evento aparece a cada 2 semanas — coincide com as duas sextas do ciclo.",
+         "Event appears every 2 weeks — matches both Fridays of the cycle."),
+        (t("Privilégio Permanente (opcional)", "Permanent Privilege (optional)"),
+         "Permanent Privilege (optional)",
+         "Diário (10/dia × 14)",
+         "Daily (10/day × 14)",
+         140, None,
+         "S3+ · Pago · Opcional",
+         "S3+ · Paid · Optional"),
     ]
 
-    _display_rows = [
-        {_src_col: r[_src_col],
-         _de_col:  r[_de_col]  if r[_de_col]  is not None else "—",
-         _du_col:  r[_du_col]  if r[_du_col]  is not None else "—"}
-        for r in _tips_rows
-    ]
+    _display_rows = []
+    for row in _tips_data:
+        src   = row[0] if lang == "pt" else row[1]
+        freq  = row[2] if lang == "pt" else row[3]
+        de_v  = str(row[4]) if row[4] is not None else "—"
+        du_v  = str(row[5]) if row[5] is not None else "—"
+        _display_rows.append({_src_col: src, _freq_col: freq, _de_col: de_v, _du_col: du_v})
+
     st.dataframe(pd.DataFrame(_display_rows), use_container_width=True, hide_index=True)
 
-    _total_de    = sum(r[_de_col] for r in _tips_rows if r[_de_col] is not None)
-    _total_du    = sum(r[_du_col] for r in _tips_rows if r[_du_col] is not None)
-    _total_de_f2p = _total_de - 10
-    _tc1, _tc2, _tc3 = st.columns(3)
-    _tc1.metric(t("Total DE (com priv.)", "Total DE (with priv.)"),       f"{_total_de}")
-    _tc2.metric(t("Total DE F2P (sem priv.)", "Total DE F2P (no priv.)"), f"{_total_de_f2p}")
-    _tc3.metric(t("Total Pó", "Total Dust"),                              f"{_total_du}")
+    # Totals
+    _total_de_f2p = sum(r[4] for r in _tips_data[:-1] if r[4] is not None)  # exclude Privilege
+    _total_de_all = sum(r[4] for r in _tips_data       if r[4] is not None)
+    _total_du     = sum(r[5] for r in _tips_data       if r[5] is not None)
+
+    _tc1, _tc2, _tc3, _tc4 = st.columns(4)
+    _tc1.metric(t("DE F2P", "DE F2P"),             f"{_total_de_f2p}+")
+    _tc2.metric(t("DE com Priv.", "DE with Priv."), f"{_total_de_all}+")
+    _tc3.metric(t("Pó", "Dust"),                   f"{_total_du}")
+    _tc4.metric(t("DE+Pó F2P", "DE+Dust F2P"),     f"{_total_de_f2p + _total_du}+")
+
+    st.markdown("---")
+    st.markdown(f"**{t('Observações','Notes')}**")
+    for row in _tips_data:
+        note = row[6] if lang == "pt" else row[7]
+        src  = row[0] if lang == "pt" else row[1]
+        if note:
+            st.caption(f"**{src}** — {note}")
 
     st.info(t(
         "ⓘ **Privilégio Permanente** — Disponível a partir da **S3**. Recurso **pago** e opcional — "
-        "não é acessível a todos os jogadores.",
-        "ⓘ **Permanent Privilege** — Available from **S3** onwards. **Paid** and optional feature — "
-        "not available to all players.",
+        "não contabilizado no total F2P.",
+        "ⓘ **Permanent Privilege** — Available from **S3** onwards. **Paid** and optional — "
+        "not counted in the F2P total.",
     ))
 
 # ── INVENTÁRIO ─────────────────────────────────────────────────────────────────
