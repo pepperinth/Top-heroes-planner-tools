@@ -93,76 +93,86 @@ with st.expander("💡 " + t("Dicas — Como conseguir 1k+ DE+Pó por ciclo F2P"
     _de_col   = "DE"
     _du_col   = t("Pó", "Dust")
 
-    # (source_pt, source_en, frequency_pt, frequency_en, de_per_cycle, dust_per_cycle, note_pt, note_en)
+    # (source_pt, source_en, freq_pt, freq_en, de, dust, note_pt, note_en, is_optional)
     _tips_data = [
-        ("Black Dragon / Yeti",
-         "Black Dragon / Yeti",
+        ("Black Dragon / Yeti (loja)",
+         "Black Dragon / Yeti (store)",
          "2× por ciclo (a cada 2 sem.)",
          "2× per cycle (every 2 wks)",
          200, 200,
          "Loja aparece a cada 2 semanas — coincide com as duas sextas do ciclo.",
-         "Store appears every 2 weeks — matches both Fridays of the cycle."),
+         "Store appears every 2 weeks — matches both Fridays of the cycle.",
+         False),
         ("Loja de Honra da Guilda",
          "Guild Honor Store",
          "Semanal (2×)",
          "Weekly (2×)",
          70, 70,
-         "", ""),
+         "", "", False),
         ("Loja de Troca",
          "Trade Store",
          "Semanal (2×)",
          "Weekly (2×)",
          60, None,
-         "", ""),
+         "", "", False),
         ("Loja da Guilda",
          "Guild Store",
          "Semanal (2×)",
          "Weekly (2×)",
          None, 70,
-         "", ""),
+         "", "", False),
         ("Marcos das Minas",
          "Mines Milestones",
          "Semanal (2×)",
          "Weekly (2×)",
          60, None,
-         "", ""),
+         "", "", False),
         ("Oficina de Essência",
          "Essence Workshop",
          "Diário (mín. 7/dia × 14)",
          "Daily (min. 7/day × 14)",
          98, None,
          "Mínimo de 7 por dia. Valor pode ser maior dependendo da atividade.",
-         "Minimum 7 per day. Value may be higher depending on activity."),
-        ("Rush event — Lord Gear",
-         "Rush event — Lord Gear",
+         "Minimum 7 per day. Value may be higher depending on activity.",
+         False),
+        ("Evento Regular — Lord Gear",
+         "Regular Event — Lord Gear",
          "2× por ciclo (a cada 2 sem.)",
          "2× per cycle (every 2 wks)",
          150, 150,
          "Evento aparece a cada 2 semanas — coincide com as duas sextas do ciclo.",
-         "Event appears every 2 weeks — matches both Fridays of the cycle."),
+         "Event appears every 2 weeks — matches both Fridays of the cycle.",
+         False),
+        ("Recompensas (Bounties)",
+         "Bounties",
+         "Diário (6/dia × 14)",
+         "Daily (6/day × 14)",
+         84, None,
+         "", "", False),
         (t("Privilégio Permanente (opcional)", "Permanent Privilege (optional)"),
          "Permanent Privilege (optional)",
          "Diário (10/dia × 14)",
          "Daily (10/day × 14)",
          140, None,
          "S3+ · Pago · Opcional",
-         "S3+ · Paid · Optional"),
+         "S3+ · Paid · Optional",
+         True),  # optional — excluded from F2P total
     ]
 
     _display_rows = []
     for row in _tips_data:
-        src   = row[0] if lang == "pt" else row[1]
-        freq  = row[2] if lang == "pt" else row[3]
-        de_v  = str(row[4]) if row[4] is not None else "—"
-        du_v  = str(row[5]) if row[5] is not None else "—"
+        src  = row[0] if lang == "pt" else row[1]
+        freq = row[2] if lang == "pt" else row[3]
+        de_v = str(row[4]) if row[4] is not None else "—"
+        du_v = str(row[5]) if row[5] is not None else "—"
         _display_rows.append({_src_col: src, _freq_col: freq, _de_col: de_v, _du_col: du_v})
 
     st.dataframe(pd.DataFrame(_display_rows), use_container_width=True, hide_index=True)
 
-    # Totals
-    _total_de_f2p = sum(r[4] for r in _tips_data[:-1] if r[4] is not None)  # exclude Privilege
-    _total_de_all = sum(r[4] for r in _tips_data       if r[4] is not None)
-    _total_du     = sum(r[5] for r in _tips_data       if r[5] is not None)
+    # Totals — exclude optional (Privilege)
+    _total_de_f2p = sum(r[4] for r in _tips_data if r[4] is not None and not r[8])
+    _total_de_all = sum(r[4] for r in _tips_data if r[4] is not None)
+    _total_du     = sum(r[5] for r in _tips_data if r[5] is not None)
 
     _tc1, _tc2, _tc3, _tc4 = st.columns(4)
     _tc1.metric(t("DE F2P", "DE F2P"),             f"{_total_de_f2p}+")
