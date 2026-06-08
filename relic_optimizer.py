@@ -415,19 +415,20 @@ def _gen_all_splits(total: int, n: int):
 
 def _mandatory_assignments(mandatory_names: list, split: tuple):
     """
-    Yield every injective mapping  {target_idx: mandatory_name}
-    where mandatory_names are distributed across DIFFERENT chains
-    and every assigned chain has split[idx] >= 2.
-
-    Mandatory relics may land in ANY chain — inter1/inter2 are NOT
-    forced to target[0]/target[1].  The optimizer finds the best fit.
+    Yield the fixed assignment: mandatory_names[i] → chain i.
+    inter1 always goes to the highest-priority target's chain,
+    inter2 to the second-priority chain, etc.
+    Chains with h < 2 cannot receive a mandatory; those splits are skipped.
     """
-    n_mand     = len(mandatory_names)
-    eligible   = [i for i, h in enumerate(split) if h >= 2]
-    if len(eligible) < n_mand:
-        return  # not enough chains with room for mandatory relays
-    for perm in permutations(eligible, n_mand):
-        yield dict(zip(perm, mandatory_names))
+    if not mandatory_names:
+        yield {}
+        return
+    assignment: dict = {}
+    for i, mname in enumerate(mandatory_names):
+        if i >= len(split) or split[i] < 2:
+            return  # this split can't accommodate the mandatory → skip
+        assignment[i] = [mname]
+    yield assignment
 
 
 def compute_route(inv: dict) -> dict:
@@ -485,13 +486,8 @@ def compute_route(inv: dict) -> dict:
         key=lambda r: (0 if can_use_init.get(r, True) else 1),
     )
 
-    # User's explicit assignment: inter1 → target[0], inter2 → target[1]
-    user_assignment = {i: mandatory_names[i]
-                       for i in range(min(len(mandatory_names), len(targets)))}
-
-    best_score        = -1
-    best_result       = None
-    user_assign_score = None   # score when using exactly the user's assignment
+    best_score  = -1
+    best_result = None
 
     def _evaluate_config(split, assignment):
         """
@@ -514,20 +510,28 @@ def compute_route(inv: dict) -> dict:
             target_orig = levels[target]
             target_sp   = specific[target]
 
-            # Which mandatory relay (if any) goes into this chain?
-            mandatory_name = assignment.get(t_idx)
-            mandatory_spec = None
-            if mandatory_name and mandatory_name not in used:
-                mandatory_spec = (mandatory_name,
-                                  levels[mandatory_name],
-                                  specific[mandatory_name])
+            # Which mandatory relays (if any) go into this chain?
+            chain_mand_names = [
+                m for m in assignment.get(t_idx, [])
+                if m not in used
+            ]
+            mandatory_specs = [
+                (m, levels[m], specific[m])
+                for m in chain_mand_names
+            ]
+
+            # All relics assigned as mandatory anywhere (to exclude from optional pool)
+            all_assigned_mandatories = {
+                m for mlist in assignment.values() for m in mlist
+            }
 
             # Seed: highest-value available relic not already committed
             seed_name = None
             seed_lv   = 0
             seed_sp   = 0
             for sc in seed_pool:
-                if sc not in used and sc != target and sc != mandatory_name:
+                if (sc not in used and sc != target
+                        and sc not in all_assigned_mandatories):
                     seed_name = sc
                     seed_lv   = levels[sc]
                     seed_sp   = specific.get(sc, 0)
@@ -535,9 +539,6 @@ def compute_route(inv: dict) -> dict:
             if seed_name is None:
                 return None, None
 
-            # Exclude ALL mandatory relics from optional pool — each mandatory
-            # must appear only in its own assigned chain, not as a free optional elsewhere.
-            all_assigned_mandatories = set(assignment.values())
             other_relays = [
                 (r, levels[r], specific[r])
                 for r in relay_pool
@@ -549,7 +550,7 @@ def compute_route(inv: dict) -> dict:
 
             lv, u, relay_order, steps = best_chain_for_target(
                 seed_name, seed_lv, seed_sp,
-                mandatory_spec,
+                mandatory_specs,
                 other_relays,
                 h - 1,           # relay slots
                 target, target_orig, target_sp,
@@ -563,8 +564,8 @@ def compute_route(inv: dict) -> dict:
             total_u   += u
             universal -= u
             used.add(seed_name)
-            if mandatory_spec:
-                used.add(mandatory_name)
+            for m in chain_mand_names:
+                used.add(m)
             for (name, _, _) in (relay_order or []):
                 used.add(name)
 
@@ -596,12 +597,6 @@ def compute_route(inv: dict) -> dict:
             sc, result = _evaluate_config(split, assignment)
             if result is None:
                 continue
-
-            # Track user's explicit assignment score
-            if assignment == user_assignment:
-                # Find the split that satisfies the user's inter1→target[0], inter2→target[1]
-                user_assign_score = sc
-
             if sc > best_score or (sc == best_score and result["universal_used"] < best_result["universal_used"]):
                 best_score  = sc
                 best_result = result
