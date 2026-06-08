@@ -454,16 +454,20 @@ def compute_route(inv: dict) -> dict:
         }
 
     # Seeds: prefer high level + few specific shards (level donated, shards unused in seed role)
+    # can_use=False relics are still eligible as seeds (they just donate level, no shards used).
     def seed_score(r):
-        return levels_init.get(r, 0) * 10 - specific_init.get(r, 0)
+        prefer = 1 if can_use_init.get(r, True) else 0
+        return prefer * 1000 + levels_init.get(r, 0) * 10 - specific_init.get(r, 0)
 
-    seed_pool  = sorted([r for r in UNIVERSAL_RELICS
-                         if r not in targets and can_use_init.get(r, True)],
+    seed_pool  = sorted([r for r in UNIVERSAL_RELICS if r not in targets],
                         key=seed_score, reverse=True)
-    relay_pool = [r for r in UNIVERSAL_RELICS
-                  if specific_init.get(r, 0) > 0
-                  and r not in targets
-                  and can_use_init.get(r, True)]
+
+    # Relay pool: can_use=True relics first, can_use=False last (avoid but don't exclude).
+    relay_pool = sorted(
+        [r for r in UNIVERSAL_RELICS
+         if specific_init.get(r, 0) > 0 and r not in targets],
+        key=lambda r: (0 if can_use_init.get(r, True) else 1),
+    )
 
     # User's explicit assignment: inter1 → target[0], inter2 → target[1]
     user_assignment = {i: mandatory_names[i]
@@ -591,6 +595,58 @@ def compute_route(inv: dict) -> dict:
             "hammers_used": 0, "universal_used": 0, "targets": all_targets,
             "suboptimal_note": "",
         }
+
+    # ── Post-process: spend ALL remaining resources (no hammer needed) ────────
+    # 1. Spend remaining specific shards on every relic that still has some.
+    # 2. Spend remaining universal shards on undeveloped targets (in priority order).
+    # This ensures nothing is left on the table after the hammer chain.
+    fl = best_result["final_levels"]
+    fs = best_result["final_specific"]
+    remaining_univ = universal_init - best_result["universal_used"]
+
+    # Pass 1 — specific shards for all relics
+    for relic in ALL_RELICS:
+        sp = fs.get(relic, 0)
+        if sp <= 0:
+            continue
+        cur = fl.get(relic, 0)
+        if cur >= 100:
+            continue
+        new_lv = max_level_reachable(cur, sp)
+        if new_lv > cur:
+            sp_used = shards_needed(cur, new_lv)
+            best_result["steps"].append({
+                "type": "develop", "relic": relic,
+                "from": cur, "to": new_lv,
+                "sp_used": sp_used, "u_used": 0,
+            })
+            fl[relic] = new_lv
+            fs[relic] = sp - sp_used
+
+    # Pass 2 — universal shards on targets that haven't reached goal (in order)
+    for relic in all_targets:
+        if remaining_univ <= 0:
+            break
+        cur = fl.get(relic, 0)
+        if cur >= target_goal:
+            continue
+        sp  = fs.get(relic, 0)
+        cap = target_goal
+        new_lv = max_level_reachable(cur, sp + remaining_univ)
+        new_lv = min(new_lv, cap)
+        if new_lv > cur:
+            total_cost = shards_needed(cur, new_lv)
+            sp_used  = min(sp, total_cost)
+            u_used   = total_cost - sp_used
+            best_result["steps"].append({
+                "type": "develop", "relic": relic,
+                "from": cur, "to": new_lv,
+                "sp_used": sp_used, "u_used": u_used,
+            })
+            fl[relic]  = new_lv
+            fs[relic]  = sp - sp_used
+            remaining_univ -= u_used
+            best_result["universal_used"] += u_used
 
     # Check if user's specified inter1/inter2 assignment was suboptimal
     if (user_assign_score is not None
