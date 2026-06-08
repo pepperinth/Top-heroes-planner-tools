@@ -249,19 +249,20 @@ def develop_final(from_level: int, specific_shards: int, universal_budget: int,
 # ── Chain simulation ───────────────────────────────────────────────────────────
 
 def simulate_chain(
-    seed_name: str, seed_level: int,
+    seed_name: str, seed_level: int, seed_specific: int,
     relay_specs: list,          # [(name, orig_level, specific_shards), ...]
     target_name: str, target_orig_level: int, target_specific: int,
     universal_pool: int,
     target_goal: int = 100,
 ) -> tuple:
     """
-    Simulate: seed -> relay_specs[0] -> ... -> relay_specs[-1] -> target.
+    Simulate: develop seed → swap → develop relay → swap → ... → target.
 
-    Each arrow is a Miracle Hammer swap (1 hammer each).
-    After every swap the receiving relic develops:
-      - relays  : chain_develop  (exhaust specific shards, min universals)
-      - target  : develop_final  (use all remaining universals)
+    Each relic is developed (specific shards + min universals) BEFORE donating
+    its level to the next via Miracle Hammer swap.  This way every relic in
+    the chain starts higher than it would without prior development.
+
+      seed develops  → swap  → relay develops  → swap  → ... → target develops
 
     Returns (final_target_level, u_total_used, steps_list).
     """
@@ -269,6 +270,19 @@ def simulate_chain(
     current_carrier = seed_name
     remaining_u     = universal_pool
     steps           = []
+
+    # Develop seed first so it donates the highest possible level
+    if seed_specific > 0 and current_level < 100:
+        achieved, sp_used, u_used = chain_develop(current_level, seed_specific, remaining_u)
+        if achieved > current_level:
+            steps.append({
+                "type":    "develop",
+                "relic":   seed_name,
+                "from":    current_level, "to":      achieved,
+                "sp_used": sp_used,       "u_used":  u_used,
+            })
+            remaining_u   -= u_used
+            current_level  = achieved
 
     for (name, orig_level, specific) in relay_specs:
         # Hammer swap
@@ -316,7 +330,7 @@ def simulate_chain(
 # ── Per-target chain optimizer ─────────────────────────────────────────────────
 
 def best_chain_for_target(
-    seed_name: str, seed_level: int,
+    seed_name: str, seed_level: int, seed_specific: int,
     mandatory_relay,        # (name, orig_level, specific) or None
     other_relays: list,     # [(name, orig_level, specific), ...]
     n_relays: int,          # relay slots = hammers - 1
@@ -339,7 +353,7 @@ def best_chain_for_target(
     def evaluate(relay_order):
         nonlocal best_lv, best_u, best_order, best_steps
         lv, u, steps = simulate_chain(
-            seed_name, seed_level, relay_order,
+            seed_name, seed_level, seed_specific, relay_order,
             target_name, target_orig_level, target_specific,
             universal_pool, target_goal,
         )
@@ -453,11 +467,13 @@ def compute_route(inv: dict) -> dict:
             "suboptimal_note": "",
         }
 
-    # Seeds: prefer high level + few specific shards (level donated, shards unused in seed role)
-    # can_use=False relics are still eligible as seeds (they just donate level, no shards used).
+    # Seeds: prefer high level + high specific shards.
+    # Seeds now develop their specific shards BEFORE donating their level,
+    # so more specific shards = higher donation = better seed.
+    # can_use=False relics are deprioritised but still eligible.
     def seed_score(r):
         prefer = 1 if can_use_init.get(r, True) else 0
-        return prefer * 1000 + levels_init.get(r, 0) * 10 - specific_init.get(r, 0)
+        return prefer * 1000 + levels_init.get(r, 0) * 10 + specific_init.get(r, 0)
 
     seed_pool  = sorted([r for r in UNIVERSAL_RELICS if r not in targets],
                         key=seed_score, reverse=True)
@@ -509,10 +525,12 @@ def compute_route(inv: dict) -> dict:
             # Seed: highest-value available relic not already committed
             seed_name = None
             seed_lv   = 0
+            seed_sp   = 0
             for sc in seed_pool:
                 if sc not in used and sc != target and sc != mandatory_name:
                     seed_name = sc
                     seed_lv   = levels[sc]
+                    seed_sp   = specific.get(sc, 0)
                     break
             if seed_name is None:
                 return None, None
@@ -530,7 +548,7 @@ def compute_route(inv: dict) -> dict:
             ]
 
             lv, u, relay_order, steps = best_chain_for_target(
-                seed_name, seed_lv,
+                seed_name, seed_lv, seed_sp,
                 mandatory_spec,
                 other_relays,
                 h - 1,           # relay slots
@@ -595,58 +613,6 @@ def compute_route(inv: dict) -> dict:
             "hammers_used": 0, "universal_used": 0, "targets": all_targets,
             "suboptimal_note": "",
         }
-
-    # ── Post-process: spend ALL remaining resources (no hammer needed) ────────
-    # 1. Spend remaining specific shards on every relic that still has some.
-    # 2. Spend remaining universal shards on undeveloped targets (in priority order).
-    # This ensures nothing is left on the table after the hammer chain.
-    fl = best_result["final_levels"]
-    fs = best_result["final_specific"]
-    remaining_univ = universal_init - best_result["universal_used"]
-
-    # Pass 1 — specific shards for all relics
-    for relic in ALL_RELICS:
-        sp = fs.get(relic, 0)
-        if sp <= 0:
-            continue
-        cur = fl.get(relic, 0)
-        if cur >= 100:
-            continue
-        new_lv = max_level_reachable(cur, sp)
-        if new_lv > cur:
-            sp_used = shards_needed(cur, new_lv)
-            best_result["steps"].append({
-                "type": "develop", "relic": relic,
-                "from": cur, "to": new_lv,
-                "sp_used": sp_used, "u_used": 0,
-            })
-            fl[relic] = new_lv
-            fs[relic] = sp - sp_used
-
-    # Pass 2 — universal shards on targets that haven't reached goal (in order)
-    for relic in all_targets:
-        if remaining_univ <= 0:
-            break
-        cur = fl.get(relic, 0)
-        if cur >= target_goal:
-            continue
-        sp  = fs.get(relic, 0)
-        cap = target_goal
-        new_lv = max_level_reachable(cur, sp + remaining_univ)
-        new_lv = min(new_lv, cap)
-        if new_lv > cur:
-            total_cost = shards_needed(cur, new_lv)
-            sp_used  = min(sp, total_cost)
-            u_used   = total_cost - sp_used
-            best_result["steps"].append({
-                "type": "develop", "relic": relic,
-                "from": cur, "to": new_lv,
-                "sp_used": sp_used, "u_used": u_used,
-            })
-            fl[relic]  = new_lv
-            fs[relic]  = sp - sp_used
-            remaining_univ -= u_used
-            best_result["universal_used"] += u_used
 
     # Check if user's specified inter1/inter2 assignment was suboptimal
     if (user_assign_score is not None
