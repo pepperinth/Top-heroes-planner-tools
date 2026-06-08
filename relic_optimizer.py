@@ -614,6 +614,35 @@ def compute_route(inv: dict) -> dict:
             "suboptimal_note": "",
         }
 
+    # ── Post-process: spend remaining universals on targets not yet at goal ──────
+    # Seeds now use their specific shards inside the chain (before swapping),
+    # so universals saved there should flow to undeveloped targets.
+    fl = best_result["final_levels"]
+    fs = best_result["final_specific"]
+    remaining_univ = universal_init - best_result["universal_used"]
+
+    for relic in all_targets:
+        if remaining_univ <= 0:
+            break
+        cur = fl.get(relic, 0)
+        if cur >= target_goal:
+            continue
+        sp     = fs.get(relic, 0)
+        new_lv = min(max_level_reachable(cur, sp + remaining_univ), target_goal)
+        if new_lv > cur:
+            total_cost = shards_needed(cur, new_lv)
+            sp_used    = min(sp, total_cost)
+            u_used     = total_cost - sp_used
+            best_result["steps"].append({
+                "type": "develop", "relic": relic,
+                "from": cur, "to": new_lv,
+                "sp_used": sp_used, "u_used": u_used,
+            })
+            fl[relic]  = new_lv
+            fs[relic]  = sp - sp_used
+            remaining_univ -= u_used
+            best_result["universal_used"] += u_used
+
     # Check if user's specified inter1/inter2 assignment was suboptimal
     if (user_assign_score is not None
             and user_assign_score < best_score
