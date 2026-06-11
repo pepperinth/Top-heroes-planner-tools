@@ -173,6 +173,14 @@ st.caption(t("Calcula a rota de Martelo Milagroso para maximizar os níveis das 
 
 LEG_OPTIONS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
 
+_star_fmt = {
+    "0★": t("— Sem relíquia", "— No relic"),
+    **{f"Y★{n}": f"{t('Amarelo','Yellow')} ★{n}" for n in range(1, 6)},
+    **{f"R★{n}": f"{t('Vermelho','Red')} ★{n}" for n in range(1, 6)},
+    **{f"P★{n}": f"{t('Platinado','Platinum')} ★{n}" for n in range(1, 6)},
+    **{f"B★{n}": f"{t('Preto','Black')} ★{n}" for n in range(1, 6)},
+}
+
 tab_main, tab_help = st.tabs([
     "🔍 " + t("Otimizador", "Optimizer"),
     "📖 " + t("Instruções & Referência", "Instructions & Reference"),
@@ -200,7 +208,8 @@ with tab_main:
                 _set_disp = st.selectbox(t("Conjunto alvo", "Target set"), _set_opts, index=0)
                 target_set = {"Liga": "League", "Horda": "Horde", "Natureza": "Nature"}.get(_set_disp, _set_disp)
             with c2:
-                tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0)
+                tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0,
+                                        format_func=lambda x: _star_fmt.get(x, x))
                 tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, index=0)
                 _show_relic_star(tgt_star, tgt_leg)
             with c3:
@@ -248,7 +257,8 @@ with tab_main:
                 relic_kind = t("Universal", "Universal") if single_relic in UNIVERSAL_RELICS else t("Set", "Set")
                 st.caption(relic_kind)
             with s2:
-                tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0, key="sr_tgt_star")
+                tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0, key="sr_tgt_star",
+                                        format_func=lambda x: _star_fmt.get(x, x))
                 tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, index=0, key="sr_tgt_leg")
                 _show_relic_star(tgt_star, tgt_leg)
             with s3:
@@ -281,16 +291,6 @@ with tab_main:
             (t("🌿 Set: Natureza", "🌿 Set: Nature"), SETS["Nature"]),
         ]
         _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
-        _star_names = [
-            ("Y", t("Amarelo", "Yellow")),
-            ("R", t("Vermelho", "Red")),
-            ("P", t("Platinado", "Platinum")),
-            ("B", t("Preto", "Black")),
-        ]
-        _star_fmt = {
-            "0★": t("— Sem relíquia", "— No relic"),
-            **{f"{pfx}★{n}": f"{name} ★{n}" for pfx, name in _star_names for n in range(1, 6)},
-        }
 
         _hc0, _hc1, _hc2, _hc3, _hc4 = st.columns([1, 3, 5, 1, 1])
         _hc1.caption(t("Relíquia", "Relic"))
