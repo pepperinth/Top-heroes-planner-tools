@@ -583,41 +583,93 @@ with tab_plan:
 # TAB 3 — REFERENCE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ref:
-    ref1, ref2 = st.columns(2, gap="large")
+    _how1, _how2 = st.tabs([
+        "📖 " + t("Como usar", "How to use"),
+        "📊 " + t("Tabelas de referência", "Reference tables"),
+    ])
 
-    with ref1:
-        st.subheader(t("🔮 Custo por Nível (Magicite)", "🔮 Level Costs (Magicite)"))
-        st.caption(t(
-            "Magicite necessário para avançar até cada nível (por facção). "
-            "Níveis com 💠 exigem Núcleos Mágicos (universais).",
-            "Magicite needed to advance to each level (per faction). "
-            "Levels with 💠 require Magic Cores (universal).",
-        ))
-        rows_lvl = []
-        for lvl in range(2, MAX_LEVEL + 1):
-            mag  = MAGICITE_PER_LEVEL.get(lvl, 0)
-            core = MAGIC_CORE_AT_LEVEL.get(lvl)
-            cell = f"{mag:,}"
-            if core:
-                cell += f"  +  💠 {core:,}"
-            rows_lvl.append({"#": lvl, t("Magicite", "Magicite"): cell})
-        df_lvl = pd.DataFrame(rows_lvl).set_index("#")
-        st.dataframe(df_lvl, use_container_width=True, height=400)
+    with _how1:
+        st.markdown(t(
+            """
+### Calculadora de Behemoth — Como usar
 
-    with ref2:
-        st.subheader(t("🔑 Custo por Estrela (Selos)", "🔑 Star Costs (Seals)"))
-        st.caption(t(
-            "Selos necessários para cada estrela (específicos ou universais).",
-            "Seals needed for each star (specific or universal).",
+**Aba Calculadora**
+1. Selecione o **Behemoth** e sua facção no topo da aba
+2. Configure **nível atual** e **nível alvo** (1–30)
+3. Configure **estrelas atuais** e **estrelas alvo** (0–75)
+4. Informe seu **inventário** (Magicite, Núcleos Mágicos, Selos específicos, Selos universais) para ver o que falta
+5. Os totais aparecem automaticamente abaixo
+
+**Aba Planejador de Lote**
+1. Selecione Behemoth, nível e estrelas atuais e alvos
+2. Clique **"Adicionar"** para incluir no plano
+3. Veja o custo total consolidado e compare com inventário do plano
+4. Use **"Enviar para Eventos"** para transferir os pontos ao Rastreador de Eventos
+
+**Recursos**
+- **Magicite**: específico por facção (Liga, Horda, Natureza)
+- **Núcleos Mágicos (Magic Cores)**: universal, exigidos em níveis específicos
+- **Selos**: específicos do Behemoth ou universais; necessários para aumentar estrelas
+""",
+            """
+### Behemoth Calculator — How to use
+
+**Calculator tab**
+1. Select the **Behemoth** and its faction at the top of the tab
+2. Set **current level** and **target level** (1–30)
+3. Set **current stars** and **target stars** (0–75)
+4. Enter your **inventory** (Magicite, Magic Cores, specific Seals, universal Seals) to see what's missing
+5. Totals appear automatically below
+
+**Batch Planner tab**
+1. Select Behemoth, current and target level and stars
+2. Click **"Add"** to include in the plan
+3. See consolidated totals and compare with plan inventory
+4. Use **"Send to Events"** to transfer points to the Events Tracker
+
+**Resources**
+- **Magicite**: faction-specific (League, Horde, Nature)
+- **Magic Cores**: universal, required at specific levels
+- **Seals**: Behemoth-specific or universal; needed to increase stars
+""",
         ))
-        rows_star = []
-        cumulative = 0
-        for i, cost in enumerate(STAR_SEAL_COSTS):
-            cumulative += cost
-            rows_star.append({
-                "⭐": i + 1,
-                t("Selos", "Seals"): cost,
-                t("Acumulado", "Cumulative"): cumulative,
-            })
-        df_star = pd.DataFrame(rows_star).set_index("⭐")
-        st.dataframe(df_star, use_container_width=True, height=400)
+
+    with _how2:
+        ref1, ref2 = st.columns(2, gap="large")
+
+        with ref1:
+            st.subheader(t("🔮 Custo por Nível (Magicite)", "🔮 Level Costs (Magicite)"))
+            st.caption(t(
+                "Magicite necessário para avançar até cada nível (por facção). "
+                "Níveis com 💠 exigem Núcleos Mágicos (universais).",
+                "Magicite needed to advance to each level (per faction). "
+                "Levels with 💠 require Magic Cores (universal).",
+            ))
+            rows_lvl = []
+            for lvl in range(2, MAX_LEVEL + 1):
+                mag  = MAGICITE_PER_LEVEL.get(lvl, 0)
+                core = MAGIC_CORE_AT_LEVEL.get(lvl)
+                cell = f"{mag:,}"
+                if core:
+                    cell += f"  +  💠 {core:,}"
+                rows_lvl.append({"#": lvl, t("Magicite", "Magicite"): cell})
+            df_lvl = pd.DataFrame(rows_lvl).set_index("#")
+            st.dataframe(df_lvl, use_container_width=True, height=400)
+
+        with ref2:
+            st.subheader(t("🔑 Custo por Estrela (Selos)", "🔑 Star Costs (Seals)"))
+            st.caption(t(
+                "Selos necessários para cada estrela (específicos ou universais).",
+                "Seals needed for each star (specific or universal).",
+            ))
+            rows_star = []
+            cumulative = 0
+            for i, cost in enumerate(STAR_SEAL_COSTS):
+                cumulative += cost
+                rows_star.append({
+                    "⭐": i + 1,
+                    t("Selos", "Seals"): cost,
+                    t("Acumulado", "Cumulative"): cumulative,
+                })
+            df_star = pd.DataFrame(rows_star).set_index("⭐")
+            st.dataframe(df_star, use_container_width=True, height=400)

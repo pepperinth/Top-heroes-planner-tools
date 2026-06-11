@@ -193,9 +193,10 @@ with st.expander(t("📋 Cópias por Skin (opcional)", "📋 Skin-Specific Copie
 
 # ── ABAS ───────────────────────────────────────────────────────────────────────
 st.divider()
-tab_calc, tab_plan = st.tabs([
+tab_calc, tab_plan, tab_help = st.tabs([
     "🧢 " + t("Calculadora", "Calculator"),
     "📋 " + t("Planejador de Lote", "Batch Planner"),
+    "📖 " + t("Instruções & Referência", "Instructions & Reference"),
 ])
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -562,3 +563,80 @@ with tab_plan:
                 st.session_state.pop(f"_calc_contrib_Lord_Gear_Trial_{_k}", None)
             _skins_save()
             st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ABA 3 — INSTRUÇÕES & REFERÊNCIA
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_help:
+    _hi1, _hi2 = st.tabs([
+        "📖 " + t("Como usar", "How to use"),
+        "📊 " + t("Referência de dados", "Data reference"),
+    ])
+
+    with _hi1:
+        st.markdown(t(
+            """
+### Calculadora de Troop Skins — Como usar
+
+**Inventário** (topo da página)
+- **Medalhas**: moeda principal para evoluir skins de nível 1 a 50
+- **Tokens** (Lendário / Épico / Raro): desbloqueiam milestones de estrelas (lvl 10, 20, 30, 40, 45, 50)
+- **Cópias por Skin**: informe cópias específicas de cada skin — são somadas ao pool de tokens da mesma raridade
+
+**Aba Calculadora**
+1. Selecione a raridade e a skin
+2. Configure nível atual e alvo (Nível, 1–50)
+3. Configure Honor atual e alvo (HL, 0–150)
+4. Veja custo em medalhas, tokens e impact em eventos
+
+**Aba Planejador de Lote**
+1. Adicione múltiplas skins com seus objetivos
+2. Veja o custo total e compare com seu inventário
+
+**Sistema de Tokens**
+Tokens são necessários em milestones de nível: 10★, 20★★, 30★★★, 40★★★★, 45★★★★★, 50 MAX
+""",
+            """
+### Troop Skin Calculator — How to use
+
+**Inventory** (top of page)
+- **Medals**: main currency to level skins from 1 to 50
+- **Tokens** (Legendary / Epic / Rare): unlock star milestones (lvl 10, 20, 30, 40, 45, 50)
+- **Skin-specific copies**: enter copies for individual skins — they're added to the token pool of the same rarity
+
+**Calculator tab**
+1. Select rarity and skin
+2. Set current and target level (1–50)
+3. Set current and target Honor (HL, 0–150)
+4. See medal cost, token cost, and event impact
+
+**Batch Planner tab**
+1. Add multiple skins with their goals
+2. See total cost and compare against your inventory
+
+**Token system**
+Tokens are required at level milestones: 10★, 20★★, 30★★★, 40★★★★, 45★★★★★, 50 MAX
+""",
+        ))
+
+    with _hi2:
+        _rc1, _rc2 = st.columns(2)
+        with _rc1:
+            st.subheader(t("🏅 Medalhas por Nível (Lendária)", "🏅 Medals per Level (Legendary)"))
+            st.caption(t(
+                "Custo cumulativo de medalhas para atingir cada nível (Lendária). "
+                "Épica = ÷2, Rara = ÷4.",
+                "Cumulative medal cost to reach each level (Legendary). "
+                "Epic = ÷2, Rare = ÷4.",
+            ))
+            import pandas as _pd4
+            _lev_rows = [{"LVL": _lv, t("Medalhas Acum.", "Medals Cum."): f"{LEG_CUM[_lv]:,}"}
+                         for _lv in [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50]]
+            st.dataframe(_pd4.DataFrame(_lev_rows).set_index("LVL"), use_container_width=True)
+        with _rc2:
+            st.subheader(t("🎟️ Tokens por Milestone", "🎟️ Tokens per Milestone"))
+            _tok_rows = [{"★": STAR_LABELS[_m], t("Nível", "Level"): _m,
+                          t("Tokens (cumulativo)", "Tokens (cumulative)"): TOK_CUM[_m]}
+                         for _m in MILESTONES]
+            st.dataframe(_pd4.DataFrame(_tok_rows), use_container_width=True, hide_index=True)
+

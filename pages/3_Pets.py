@@ -178,9 +178,10 @@ total_any_inv = sum(
 
 # ── ABAS ───────────────────────────────────────────────────────────────────────
 st.divider()
-tab_calc, tab_plan = st.tabs([
+tab_calc, tab_plan, tab_help = st.tabs([
     "🧮 " + t("Calculadora", "Calculator"),
     "📋 " + t("Planejador de Lote", "Batch Planner"),
+    "📖 " + t("Instruções & Referência", "Instructions & Reference"),
 ])
 
 pet_names    = [p[0] for p in PETS]
@@ -550,3 +551,80 @@ with tab_plan:
                 st.session_state.pop(f"_calc_contrib_Pet_Ranking_{_k}", None)
             _pets_save()
             st.rerun()
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ABA 3 — INSTRUÇÕES & REFERÊNCIA
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_help:
+    _hi1, _hi2 = st.tabs([
+        "📖 " + t("Como usar", "How to use"),
+        "📊 " + t("Referência de dados", "Data reference"),
+    ])
+
+    with _hi1:
+        st.markdown(t(
+            """
+### Calculadora de Pets — Como usar
+
+**Inventário de Recursos** (topo da página)
+- **Pet Food**: comida para subir nível dos pets
+- **Pet Essence**: essência para promoções
+- **Rare Pet Choice Box**: caixa que abre como pet Raro de escolha
+- **Pets Comuns**: cópias de pets comuns usados como material de EXP
+
+**Inventário de Pets**
+Informe quantas cópias de cada pet você possui.
+Marque *"Excluir de Qualquer?"* para não contar cópias de um pet como wildcard.
+
+**Aba Calculadora**
+1. Selecione o pet, sua promoção atual e nível atual
+2. Escolha o tier alvo (EPIC / LEGENDARY / MYTHIC)
+3. Veja o custo detalhado: comida, cópias (mesmas e qualquer), essência
+
+**Aba Planejador de Lote**
+1. Adicione múltiplos pets com seus objetivos
+2. Veja o custo total consolidado de todos os pets
+3. Compare com seu inventário — o app mostra o que falta
+""",
+            """
+### Pet Calculator — How to use
+
+**Resource Inventory** (top of page)
+- **Pet Food**: food to level up pets
+- **Pet Essence**: essence for promotions
+- **Rare Pet Choice Box**: opens as a Rare pet of your choice
+- **Common Pets**: common pet copies used as EXP material
+
+**Pet Inventory**
+Enter how many copies of each pet you own.
+Check *"Exclude from Any?"* to not count a pet's copies as wildcards.
+
+**Calculator tab**
+1. Select the pet, its current promotion and current level
+2. Choose the target tier (EPIC / LEGENDARY / MYTHIC)
+3. See the detailed cost: food, copies (same and any), essence
+
+**Batch Planner tab**
+1. Add multiple pets with their goals
+2. See the total consolidated cost for all pets
+3. Compare against your inventory — the app shows what's missing
+""",
+        ))
+
+    with _hi2:
+        st.subheader(t("🐾 Tiers de Promoção", "🐾 Promotion Tiers"))
+        st.caption(t(
+            "Requisitos mínimos de nível e custo estimado por tier.",
+            "Minimum level requirements and estimated cost per tier.",
+        ))
+        _pt_rows = []
+        for _promo in PROMO_LIST:
+            _min_lv, _promo_label_ref, _tier, _, _ = _promo
+            _pt_rows.append({
+                t("Promoção", "Promotion"): _promo_label_ref,
+                t("Tier", "Tier"):          _tier,
+                t("Nível mín.", "Min Lvl"): _min_lv,
+            })
+        import pandas as _pd3
+        st.dataframe(_pd3.DataFrame(_pt_rows), use_container_width=True, hide_index=True)
+

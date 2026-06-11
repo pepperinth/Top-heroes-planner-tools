@@ -512,54 +512,122 @@ with tab_batch:
 # TAB 3 — REFERÊNCIA
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ref:
-    _rt1, _rt2 = st.tabs([
-        "📈 " + t("Nivelamento (LVL 0–40)", "Leveling (LVL 0–40)"),
-        "★ " + t("Promoção (passos 1–25)", "Promotion (steps 1–25)"),
+    _how1, _how2 = st.tabs([
+        "📖 " + t("Como usar", "How to use"),
+        "📊 " + t("Tabelas de referência", "Reference tables"),
     ])
 
-    with _rt1:
-        st.caption(t(
-            f"Total para LVL 0→40: {GEAR_LV_CUMUL_RUNE[40]:,} runas · {GEAR_LV_CUMUL_RUBY[40]:,} rubies",
-            f"Total for LVL 0→40: {GEAR_LV_CUMUL_RUNE[40]:,} runes · {GEAR_LV_CUMUL_RUBY[40]:,} rubies",
-        ))
-        _ldf = [{
-            "LVL": _lv,
-            t("Runa/nível", "Rune/lvl"):   GEAR_LV_RUNE[_lv],
-            t("Ruby/nível", "Ruby/lvl"):   GEAR_LV_RUBY[_lv],
-            t("Runa Acum.", "Rune Cum."):  GEAR_LV_CUMUL_RUNE[_lv],
-            t("Ruby Acum.", "Ruby Cum."):  GEAR_LV_CUMUL_RUBY[_lv],
-        } for _lv in range(1, MAX_GEAR_LEVEL + 1)]
-        st.dataframe(pd.DataFrame(_ldf).set_index("LVL"), use_container_width=True, height=450)
+    with _how1:
+        st.markdown(t(
+            """
+### Hero Gear — Como usar
 
-    with _rt2:
-        st.caption(t(
-            f"Total: {PROMO_CUMUL_RUNE[25]:,} runas · {PROMO_CUMUL_GOLD[25]:,} gold bars · "
-            f"{PROMO_CUMUL_RUBY[25]:,} rubies · {PROMO_CUMUL_LEG[25]} ped. lend. · "
-            f"{PROMO_CUMUL_MYTH[25]} ped. míti.",
-            f"Total: {PROMO_CUMUL_RUNE[25]:,} runes · {PROMO_CUMUL_GOLD[25]:,} gold bars · "
-            f"{PROMO_CUMUL_RUBY[25]:,} rubies · {PROMO_CUMUL_LEG[25]} leg. stones · "
-            f"{PROMO_CUMUL_MYTH[25]} myth. stones",
+**Inventário** (barra lateral)
+Informe seu estoque de cada recurso:
+- **Runa de Aprimoramento**: usada tanto em nivelamento quanto em promoção
+- **Ruby**: usada em nivelamento
+- **Gold Bar**: usada em promoção (exceto passo 5/5 de cada tier)
+- **Pedra Lendária**: usada no 5º passo dos tiers 1–4 de promoção
+- **Pedra Mítica**: usada no 5º passo do tier 5 de promoção
+- **Marca de Set**: necessária para criar a primeira peça de um conjunto
+
+**Aba Calculadora**
+1. Selecione o conjunto (Knight / Blood / Titan) e a peça (Arma / Bota / Capacete / Armadura)
+2. Configure o **nível atual** (0–40) e o **nível alvo**
+3. Configure a **promoção atual** (0–25 passos) e a **promoção alvo**
+4. Marque "Precisa de Marca?" se for a primeira peça do conjunto
+5. Clique em **"Calcular"** para ver os recursos necessários
+
+**Aba Planejador de Lote**
+1. Adicione múltiplas peças com seus objetivos de nível e promoção
+2. O plano mostra o custo total e compara com seu inventário
+3. Use **"Enviar para Eventos"** para registrar os pontos
+
+**Sistema de Promoção**
+Promoção = 5 tiers × 5 passos = 25 passos no total.
+Passos 1–4 de cada tier: Runa + Gold Bar + Ruby.
+Passo 5/5 de cada tier: Runa + Gold Bar + Pedra (sem Ruby).
+""",
+            """
+### Hero Gear — How to use
+
+**Inventory** (sidebar)
+Enter your stock of each resource:
+- **Enhancement Rune**: used for both leveling and promotion
+- **Ruby**: used for leveling
+- **Gold Bar**: used for promotion (except step 5/5 of each tier)
+- **Legendary Stone**: used at step 5/5 of promotion tiers 1–4
+- **Mythic Stone**: used at step 5/5 of promotion tier 5
+- **Set Mark**: required to craft the first piece of a set
+
+**Calculator tab**
+1. Select the set (Knight / Blood / Titan) and piece (Weapon / Boot / Helmet / Armor)
+2. Set **current level** (0–40) and **target level**
+3. Set **current promotion** (0–25 steps) and **target promotion**
+4. Check "Needs Mark?" if it's the first piece of a set
+5. Click **"Calculate"** to see required resources
+
+**Batch Planner tab**
+1. Add multiple pieces with their level and promotion targets
+2. The plan shows total cost and compares against your inventory
+3. Use **"Send to Events"** to register the points
+
+**Promotion system**
+Promotion = 5 tiers × 5 steps = 25 total steps.
+Steps 1–4 of each tier: Rune + Gold Bar + Ruby.
+Step 5/5 of each tier: Rune + Gold Bar + Stone (no Ruby).
+""",
         ))
-        _prows = []
-        for _s in range(1, MAX_PROMOTION + 1):
-            _r, _g, _rb, _l, _m = PROMO_STEP_COSTS[_s - 1]
-            _stones = ""
-            if _l > 0:
-                _stones = f"{_l} {t('Lend.', 'Leg.')}"
-            if _m > 0:
-                _stones = f"{_m} {t('Míti.', 'Myth.')}"
-            _prows.append({
-                t("Passo", "Step"):                  _s,
-                "★":                                  promo_label(_s, lang),
-                t("Runa", "Rune"):                   _r,
-                t("Gold Bar", "Gold Bar"):            _g,
-                "Ruby":                               f"{_rb:,}" if _rb > 0 else "—",
-                t("Pedras", "Stones"):                _stones or "—",
-                t("Runa Acum.", "Rune Cum."):         PROMO_CUMUL_RUNE[_s],
-                t("Gold Bar Acum.", "Gold Bar Cum."): PROMO_CUMUL_GOLD[_s],
-                t("Ruby Acum.", "Ruby Cum."):         f"{PROMO_CUMUL_RUBY[_s]:,}" if PROMO_CUMUL_RUBY[_s] > 0 else "—",
-            })
-        st.dataframe(
-            pd.DataFrame(_prows).set_index(t("Passo", "Step")),
-            use_container_width=True, height=450,
-        )
+
+    with _how2:
+        _rt1, _rt2 = st.tabs([
+            "📈 " + t("Nivelamento (LVL 0–40)", "Leveling (LVL 0–40)"),
+            "★ " + t("Promoção (passos 1–25)", "Promotion (steps 1–25)"),
+        ])
+
+        with _rt1:
+            st.caption(t(
+                f"Total para LVL 0→40: {GEAR_LV_CUMUL_RUNE[40]:,} runas · {GEAR_LV_CUMUL_RUBY[40]:,} rubies",
+                f"Total for LVL 0→40: {GEAR_LV_CUMUL_RUNE[40]:,} runes · {GEAR_LV_CUMUL_RUBY[40]:,} rubies",
+            ))
+            _ldf = [{
+                "LVL": _lv,
+                t("Runa/nível", "Rune/lvl"):   GEAR_LV_RUNE[_lv],
+                t("Ruby/nível", "Ruby/lvl"):   GEAR_LV_RUBY[_lv],
+                t("Runa Acum.", "Rune Cum."):  GEAR_LV_CUMUL_RUNE[_lv],
+                t("Ruby Acum.", "Ruby Cum."):  GEAR_LV_CUMUL_RUBY[_lv],
+            } for _lv in range(1, MAX_GEAR_LEVEL + 1)]
+            st.dataframe(pd.DataFrame(_ldf).set_index("LVL"), use_container_width=True, height=450)
+
+        with _rt2:
+            st.caption(t(
+                f"Total: {PROMO_CUMUL_RUNE[25]:,} runas · {PROMO_CUMUL_GOLD[25]:,} gold bars · "
+                f"{PROMO_CUMUL_RUBY[25]:,} rubies · {PROMO_CUMUL_LEG[25]} ped. lend. · "
+                f"{PROMO_CUMUL_MYTH[25]} ped. míti.",
+                f"Total: {PROMO_CUMUL_RUNE[25]:,} runes · {PROMO_CUMUL_GOLD[25]:,} gold bars · "
+                f"{PROMO_CUMUL_RUBY[25]:,} rubies · {PROMO_CUMUL_LEG[25]} leg. stones · "
+                f"{PROMO_CUMUL_MYTH[25]} myth. stones",
+            ))
+            _prows = []
+            for _s in range(1, MAX_PROMOTION + 1):
+                _r, _g, _rb, _l, _m = PROMO_STEP_COSTS[_s - 1]
+                _stones = ""
+                if _l > 0:
+                    _stones = f"{_l} {t('Lend.', 'Leg.')}"
+                if _m > 0:
+                    _stones = f"{_m} {t('Míti.', 'Myth.')}"
+                _prows.append({
+                    t("Passo", "Step"):                  _s,
+                    "★":                                  promo_label(_s, lang),
+                    t("Runa", "Rune"):                   _r,
+                    t("Gold Bar", "Gold Bar"):            _g,
+                    "Ruby":                               f"{_rb:,}" if _rb > 0 else "—",
+                    t("Pedras", "Stones"):                _stones or "—",
+                    t("Runa Acum.", "Rune Cum."):         PROMO_CUMUL_RUNE[_s],
+                    t("Gold Bar Acum.", "Gold Bar Cum."): PROMO_CUMUL_GOLD[_s],
+                    t("Ruby Acum.", "Ruby Cum."):         f"{PROMO_CUMUL_RUBY[_s]:,}" if PROMO_CUMUL_RUBY[_s] > 0 else "—",
+                })
+            st.dataframe(
+                pd.DataFrame(_prows).set_index(t("Passo", "Step")),
+                use_container_width=True, height=450,
+            )

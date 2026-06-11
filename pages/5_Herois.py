@@ -631,56 +631,106 @@ with tab_plan:
 # ABA 3 — REFERÊNCIA
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ref:
-    _r1, _r2 = st.tabs([
-        "⭐ " + t("Estrelas", "Stars"),
-        "📚 " + t("Skills / UW / HS", "Skills / UW / HS"),
+    _how1, _how2 = st.tabs([
+        "📖 " + t("Como usar", "How to use"),
+        "📊 " + t("Tabelas de referência", "Reference tables"),
     ])
 
-    with _r1:
-        _rc1, _rc2 = st.columns(2)
-        with _rc1:
-            st.subheader(t("⭐ Lendário — custo por perna","⭐ Legendary — cost per leg"))
-            st.caption(t("Total: 500 fragmentos","Total: 500 shards"))
-            _leg_col = t("Perna","Leg")
-            _ld = [{_leg_col: i, t("Custo","Cost"): LEGENDARY_LEG_COSTS[i-1],
-                    t("Acum.","Cum."): LEGENDARY_CUMUL[i]}
-                   for i in range(1, MAX_LEGS + 1)]
-            st.dataframe(pd.DataFrame(_ld).set_index(_leg_col),
-                         use_container_width=True, height=400)
-        with _rc2:
-            st.subheader(t("⭐ Mítico — custo por perna","⭐ Mythic — cost per leg"))
-            st.caption(t("Total: 1000 fragmentos","Total: 1000 shards"))
-            _leg_col2 = t("Perna","Leg")
-            _md = [{_leg_col2: i, t("Custo","Cost"): MYTHIC_LEG_COSTS[i-1],
-                    t("Acum.","Cum."): MYTHIC_CUMUL[i]}
-                   for i in range(1, MAX_LEGS + 1)]
-            st.dataframe(pd.DataFrame(_md).set_index(_leg_col2),
-                         use_container_width=True, height=400)
+    with _how1:
+        st.markdown(t(
+            """
+### Calculadora de Heróis — Como usar
 
-    with _r2:
-        _sr1, _sr2, _sr3 = st.columns(3)
-        with _sr1:
-            st.subheader(t("📚 Livros de Skill","📚 Skill Books"))
-            _skd = [{"LVL": i+1, t("Custo","Cost"): SKILL_BOOK_COSTS[i],
-                     t("Acum.","Cum."): SKILL_BOOK_CUMUL[i]}
-                    for i in range(len(SKILL_BOOK_COSTS))]
-            st.dataframe(pd.DataFrame(_skd).set_index("LVL"),
-                         use_container_width=True, height=400)
-        with _sr2:
-            st.subheader(t("⚔️ UW — custo por nível","⚔️ UW — cost per level"))
-            st.caption(t(f"Total: {UW_CUMUL[20]:,} fragmentos",
-                         f"Total: {UW_CUMUL[20]:,} shards"))
-            _uwd = [{"LVL": i+1, t("Custo","Cost"): UW_SHARDS_PER_LEVEL[i],
-                     t("Acum.","Cum."): UW_CUMUL[i+1]}
-                    for i in range(MAX_UW_LEVEL)]
-            st.dataframe(pd.DataFrame(_uwd).set_index("LVL"),
-                         use_container_width=True, height=400)
-        with _sr3:
-            st.subheader(t("✨ Espírito Heroico (simples)","✨ Heroic Spirit (simple)"))
-            st.caption(t(f"Total: {HS_CUMUL[100]:,} fragmentos",
-                         f"Total: {HS_CUMUL[100]:,} shards"))
-            _hsd = [{"LVL": lv, t("Custo","Cost"): HS_COST_PER_LEVEL[lv],
-                     t("Acum.","Cum."): HS_CUMUL[lv]}
-                    for lv in range(1, MAX_HS_LEVEL + 1)]
-            st.dataframe(pd.DataFrame(_hsd).set_index("LVL"),
-                         use_container_width=True, height=400)
+**Aba Calculadora**
+1. Selecione o herói na lista lateral
+2. Configure os parâmetros atuais e alvos:
+   - **Estrelas / Pernas (Legs)**: custo em fragmentos de estrela
+   - **Skills**: custo em Livros de Skill (1 livro por nível, por skill)
+   - **Despertar (AWK)**: custo em Soul Stones da facção
+   - **Espírito Heroico (HS)**: custo em fragmentos de HS
+   - **Arma Única (UW)**: custo em fragmentos de UW
+   - **Atributos (Traits)**: custo em diamantes e fragmentos de trait
+3. Clique em **"Adicionar à fila"** para incluir o herói no Planejador
+
+**Aba Planejador de Filas**
+- **Q1–Q4**: filas regulares (gratuitas, paralelas)
+- **Q5**: fila de Privilégio (paga, mais rápida)
+- Use o seletor de facção por fila para separar o custo de Soul Stones
+- O Grand Total soma todos os recursos de todas as filas
+""",
+            """
+### Hero Calculator — How to use
+
+**Calculator tab**
+1. Select the hero from the dropdown
+2. Set current and target values for:
+   - **Stars / Legs**: star shard cost
+   - **Skills**: Skill Book cost (1 book per level, per skill)
+   - **Awakening (AWK)**: faction Soul Stone cost
+   - **Heroic Spirit (HS)**: HS shard cost
+   - **Unique Weapon (UW)**: UW shard cost
+   - **Traits**: diamond and trait shard cost
+3. Click **"Add to queue"** to include the hero in the Planner
+
+**Queue Planner tab**
+- **Q1–Q4**: regular queues (free, parallel)
+- **Q5**: Privilege queue (paid, faster)
+- Use the faction selector per queue to separate Soul Stone costs
+- Grand Total sums all resources across all queues
+""",
+        ))
+
+    with _how2:
+        _r1, _r2 = st.tabs([
+            "⭐ " + t("Estrelas", "Stars"),
+            "📚 " + t("Skills / UW / HS", "Skills / UW / HS"),
+        ])
+
+        with _r1:
+            _rc1, _rc2 = st.columns(2)
+            with _rc1:
+                st.subheader(t("⭐ Lendário — custo por perna","⭐ Legendary — cost per leg"))
+                st.caption(t("Total: 500 fragmentos","Total: 500 shards"))
+                _leg_col = t("Perna","Leg")
+                _ld = [{_leg_col: i, t("Custo","Cost"): LEGENDARY_LEG_COSTS[i-1],
+                        t("Acum.","Cum."): LEGENDARY_CUMUL[i]}
+                       for i in range(1, MAX_LEGS + 1)]
+                st.dataframe(pd.DataFrame(_ld).set_index(_leg_col),
+                             use_container_width=True, height=400)
+            with _rc2:
+                st.subheader(t("⭐ Mítico — custo por perna","⭐ Mythic — cost per leg"))
+                st.caption(t("Total: 1000 fragmentos","Total: 1000 shards"))
+                _leg_col2 = t("Perna","Leg")
+                _md = [{_leg_col2: i, t("Custo","Cost"): MYTHIC_LEG_COSTS[i-1],
+                        t("Acum.","Cum."): MYTHIC_CUMUL[i]}
+                       for i in range(1, MAX_LEGS + 1)]
+                st.dataframe(pd.DataFrame(_md).set_index(_leg_col2),
+                             use_container_width=True, height=400)
+
+        with _r2:
+            _sr1, _sr2, _sr3 = st.columns(3)
+            with _sr1:
+                st.subheader(t("📚 Livros de Skill","📚 Skill Books"))
+                _skd = [{"LVL": i+1, t("Custo","Cost"): SKILL_BOOK_COSTS[i],
+                         t("Acum.","Cum."): SKILL_BOOK_CUMUL[i]}
+                        for i in range(len(SKILL_BOOK_COSTS))]
+                st.dataframe(pd.DataFrame(_skd).set_index("LVL"),
+                             use_container_width=True, height=400)
+            with _sr2:
+                st.subheader(t("⚔️ UW — custo por nível","⚔️ UW — cost per level"))
+                st.caption(t(f"Total: {UW_CUMUL[20]:,} fragmentos",
+                             f"Total: {UW_CUMUL[20]:,} shards"))
+                _uwd = [{"LVL": i+1, t("Custo","Cost"): UW_SHARDS_PER_LEVEL[i],
+                         t("Acum.","Cum."): UW_CUMUL[i+1]}
+                        for i in range(MAX_UW_LEVEL)]
+                st.dataframe(pd.DataFrame(_uwd).set_index("LVL"),
+                             use_container_width=True, height=400)
+            with _sr3:
+                st.subheader(t("✨ Espírito Heroico (simples)","✨ Heroic Spirit (simple)"))
+                st.caption(t(f"Total: {HS_CUMUL[100]:,} fragmentos",
+                             f"Total: {HS_CUMUL[100]:,} shards"))
+                _hsd = [{"LVL": lv, t("Custo","Cost"): HS_COST_PER_LEVEL[lv],
+                         t("Acum.","Cum."): HS_CUMUL[lv]}
+                        for lv in range(1, MAX_HS_LEVEL + 1)]
+                st.dataframe(pd.DataFrame(_hsd).set_index("LVL"),
+                             use_container_width=True, height=400)

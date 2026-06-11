@@ -581,61 +581,119 @@ with tab_plan:
 # TAB 3 — REFERENCE
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_ref:
-    ref1, ref2 = st.columns(2, gap="large")
+    _how1, _how2 = st.tabs([
+        "📖 " + t("Como usar", "How to use"),
+        "📊 " + t("Tabelas de referência", "Reference tables"),
+    ])
 
-    with ref1:
-        st.subheader(t("⚙️ Custo por Nível (Equipamento do Lorde)", "⚙️ Cost per Level (Lord Gear)"))
-        st.caption(t(
-            "Custo acumulado de cada milestone a partir do anterior.",
-            "Incremental cost of each milestone from the previous one.",
-        ))
-        _ref_hdr = st.columns([3, 1, 1, 1, 1])
-        for col, label in zip(_ref_hdr[1:], ["rm", "mt", "ori", "db"]):
-            with col:
-                show_resource_image(label, _BASE, st)
-        ref_rows = []
-        for i in range(1, len(GEAR_MILESTONES)):
-            res = calc_gear_resources(i - 1, i)
-            tier = GEAR_MILESTONES[i][4]
-            badge = TIER_BADGE[tier]
-            name = GEAR_MILESTONES[i][1] if lang == "pt" else GEAR_MILESTONES[i][2]
-            ref_rows.append({
-                "#": i,
-                t("Nível", "Level"): f"{badge} {name}",
-                "RM": f"{res['rm']:,}" if res['rm'] else "—",
-                "MT": f"{res['mt']:,}" if res['mt'] else "—",
-                "Ori": f"{res['ori']:,}" if res['ori'] else "—",
-                "DB": f"{res['db']:,}" if res['db'] else "—",
-            })
-        st.dataframe(pd.DataFrame(ref_rows).set_index("#"),
-                     use_container_width=True, height=600)
+    with _how1:
+        st.markdown(t(
+            """
+### Lord Gear & Códex Sagrado — Como usar
 
-    with ref2:
-        st.subheader(t("📜 Custo por Estrela (Códex Sagrado)", "📜 Star Cost (Sacred Codex)"))
-        st.caption(t(
-            "Sem Metal Refinado — Códex Sagrado usa apenas MT, Oricalco e Sangue de Dragão.",
-            "No Refined Metal — Sacred Codex uses only MT, Orichalcum and Dragon Blood.",
+**Aba Calculadora**
+1. Selecione **Equipamento** (Elmo, Armadura, Bota, Arma) e sua **facção**
+2. Configure o **nível atual** e o **nível alvo** (0–30 inclusive milestones de tier)
+3. Configure as **estrelas atuais e alvo do Códex Sagrado** (0–15)
+4. Informe seu **inventário** (Metal Refinado, Fio Mágico, Oricalco, Sangue de Dragão) para ver saldo
+5. Use **"Enviar para Eventos"** para transferir pontos
+
+**Aba Planejador de Lote**
+1. Adicione peças de equipamento e/ou Códex Sagrado ao plano
+2. Use o inventário do plano para comparar com seus recursos
+3. Os totais de cada recurso aparecem com indicação de saldo/falta
+
+**Recursos**
+- **Metal Refinado (RM)**: recurso base para a maioria dos níveis de equipamento
+- **Fio Mágico (MT)**: necessário em milestones de tier
+- **Oricalco (Ori)**: necessário em milestones avançados
+- **Sangue de Dragão (DB)**: necessário nos tiers mais altos e Códex
+
+**Tiers de Equipamento**
+Bronze → Prata → Ouro → Platina → Safira → Esmeralda → Rubi → Diamante
+""",
+            """
+### Lord Gear & Sacred Codex — How to use
+
+**Calculator tab**
+1. Select **Equipment** (Helmet, Armor, Boot, Weapon) and its **faction**
+2. Set **current level** and **target level** (0–30 including tier milestones)
+3. Set **Sacred Codex current and target stars** (0–15)
+4. Enter your **inventory** (Refined Metal, Magic Thread, Orichalcum, Dragon Blood) to see balance
+5. Use **"Send to Events"** to transfer points
+
+**Batch Planner tab**
+1. Add equipment pieces and/or Sacred Codex to the plan
+2. Use plan inventory to compare against your resources
+3. Totals for each resource are shown with surplus/deficit indicators
+
+**Resources**
+- **Refined Metal (RM)**: base resource for most equipment levels
+- **Magic Thread (MT)**: required at tier milestones
+- **Orichalcum (Ori)**: required at advanced milestones
+- **Dragon Blood (DB)**: required in highest tiers and Codex
+
+**Equipment Tiers**
+Bronze → Silver → Gold → Platinum → Sapphire → Emerald → Ruby → Diamond
+""",
         ))
-        _cx_ref_hdr = st.columns([1, 1, 1, 1, 1, 1, 1])
-        for col, label in zip(_cx_ref_hdr[1:4], ["mt", "ori", "db"]):
-            with col:
-                show_resource_image(label, _BASE, st)
-        for col, label in zip(_cx_ref_hdr[4:], ["mt", "ori", "db"]):
-            with col:
-                show_resource_image(label, _BASE, st)
-        acum = t("Acum.", "Cum.")
-        codex_rows = []
-        cum_mt = cum_ori = cum_db = 0
-        for e in CODEX_STAR_COSTS:
-            cum_mt += e[1]; cum_ori += e[2]; cum_db += e[3]
-            codex_rows.append({
-                "★": e[0],
-                "MT": e[1],
-                "Ori": e[2],
-                "DB": e[3] if e[3] else "—",
-                f"MT {acum}": cum_mt,
-                f"Ori {acum}": cum_ori,
-                f"DB {acum}": cum_db,
-            })
-        st.dataframe(pd.DataFrame(codex_rows).set_index("★"),
-                     use_container_width=True, height=600)
+
+    with _how2:
+        ref1, ref2 = st.columns(2, gap="large")
+
+        with ref1:
+            st.subheader(t("⚙️ Custo por Nível (Equipamento do Lorde)", "⚙️ Cost per Level (Lord Gear)"))
+            st.caption(t(
+                "Custo acumulado de cada milestone a partir do anterior.",
+                "Incremental cost of each milestone from the previous one.",
+            ))
+            _ref_hdr = st.columns([3, 1, 1, 1, 1])
+            for col, label in zip(_ref_hdr[1:], ["rm", "mt", "ori", "db"]):
+                with col:
+                    show_resource_image(label, _BASE, st)
+            ref_rows = []
+            for i in range(1, len(GEAR_MILESTONES)):
+                res = calc_gear_resources(i - 1, i)
+                tier = GEAR_MILESTONES[i][4]
+                badge = TIER_BADGE[tier]
+                name = GEAR_MILESTONES[i][1] if lang == "pt" else GEAR_MILESTONES[i][2]
+                ref_rows.append({
+                    "#": i,
+                    t("Nível", "Level"): f"{badge} {name}",
+                    "RM": f"{res['rm']:,}" if res['rm'] else "—",
+                    "MT": f"{res['mt']:,}" if res['mt'] else "—",
+                    "Ori": f"{res['ori']:,}" if res['ori'] else "—",
+                    "DB": f"{res['db']:,}" if res['db'] else "—",
+                })
+            st.dataframe(pd.DataFrame(ref_rows).set_index("#"),
+                         use_container_width=True, height=600)
+
+        with ref2:
+            st.subheader(t("📜 Custo por Estrela (Códex Sagrado)", "📜 Star Cost (Sacred Codex)"))
+            st.caption(t(
+                "Sem Metal Refinado — Códex Sagrado usa apenas MT, Oricalco e Sangue de Dragão.",
+                "No Refined Metal — Sacred Codex uses only MT, Orichalcum and Dragon Blood.",
+            ))
+            _cx_ref_hdr = st.columns([1, 1, 1, 1, 1, 1, 1])
+            for col, label in zip(_cx_ref_hdr[1:4], ["mt", "ori", "db"]):
+                with col:
+                    show_resource_image(label, _BASE, st)
+            for col, label in zip(_cx_ref_hdr[4:], ["mt", "ori", "db"]):
+                with col:
+                    show_resource_image(label, _BASE, st)
+            acum = t("Acum.", "Cum.")
+            codex_rows = []
+            cum_mt = cum_ori = cum_db = 0
+            for e in CODEX_STAR_COSTS:
+                cum_mt += e[1]; cum_ori += e[2]; cum_db += e[3]
+                codex_rows.append({
+                    "★": e[0],
+                    "MT": e[1],
+                    "Ori": e[2],
+                    "DB": e[3] if e[3] else "—",
+                    f"MT {acum}": cum_mt,
+                    f"Ori {acum}": cum_ori,
+                    f"DB {acum}": cum_db,
+                })
+            st.dataframe(pd.DataFrame(codex_rows).set_index("★"),
+                         use_container_width=True, height=600)
