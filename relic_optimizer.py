@@ -125,6 +125,52 @@ RELIC_NAME_PT = {
     "Sacred Scroll":        "Pergaminho Sagrado",
 }
 
+# Portrait images stored in relic_imgs/ (extracted from TopHeroes Tables spreadsheet)
+RELIC_IMAGES = {
+    # Legendary — Universal
+    "Duke's Signet Ring":   "dukes_signet_ring.png",
+    "Eternal Wings":        "eternal_wings.png",
+    "Frost Diadem":         "frost_diadem.png",
+    "Royalty":              "royalty.png",
+    "War Flag":             "war_flag.png",
+    "Scale of Injustice":   "scale_of_injustice.png",
+    "Mighty Gold":          "mighty_gold.png",
+    "Persecution":          "persecution.png",
+    "Anti-Magic Handcuffs": "anti_magic_handcuffs.png",
+    "Moonstone":            "moonstone.png",
+    # Legendary — League Set
+    "Petrification Staff":  "petrification_staff.png",
+    "Soul Guard Orb":       "soul_guard_orb.png",
+    "Feather of the Pact":  "feather_of_the_pact.png",
+    # Legendary — Horde Set
+    "Thunder Judgment":     "thunder_judgment.png",
+    "Dragonheart":          "dragonheart.png",
+    "Dragonbone Amulet":    "dragonbone_amulet.png",
+    # Legendary — Nature Set
+    "Vineborne Bow":        "vineborne_bow.png",
+    "Undefeated Crown":     "undefeated_crown.png",
+    "Sacred Scroll":        "sacred_scroll.png",
+    # Epic
+    "Venom Fang":           "venom_fang.png",
+    "Terra Orb":            "terra_orb.png",
+    "Vowkeeper":            "vowkeeper.png",
+    "Marshal's Warhorn":    "marshals_warhorn.png",
+    "Philosopher's Rune":   "philosophers_rune.png",
+    "Electric Frog":        "electric_frog.png",
+    "Eye of Fear":          "eye_of_fear.png",
+    # Rare
+    "Elixir Bottle":        "elixir_bottle.png",
+    "Balance Brooch":       "balance_brooch.png",
+    "Hero's Amulet":        "heros_amulet.png",
+}
+
+RARE_RELICS = ["Elixir Bottle", "Balance Brooch", "Hero's Amulet"]
+
+EPIC_RELICS = [
+    "Venom Fang", "Terra Orb", "Vowkeeper",
+    "Marshal's Warhorn", "Philosopher's Rune", "Electric Frog", "Eye of Fear",
+]
+
 
 # ── Read inventory ─────────────────────────────────────────────────────────────
 def read_inventory(filepath: str) -> dict:

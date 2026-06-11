@@ -10,7 +10,7 @@ import pandas as pd
 from behemoth_engine import STAR_IMAGES, show_star_image
 from relic_optimizer import (
     ALL_RELICS, UNIVERSAL_RELICS, ALL_SET_RELICS, SETS,
-    STAR_OPTIONS, PREFERRED_INTER, RELIC_NAME_PT,
+    STAR_OPTIONS, PREFERRED_INTER, RELIC_NAME_PT, RELIC_IMAGES,
     star_leg_to_idx, idx_to_star_leg,
     compute_route, shards_needed,
 )
@@ -23,17 +23,42 @@ st.set_page_config(page_title="Relic Optimizer", page_icon="⚜️", layout="wid
 # ── Persistence ────────────────────────────────────────────────────────────────
 _cm = persistence.new_manager("relics")
 
+_LEG_OPTIONS_ALL = ["1/5", "2/5", "3/5", "4/5", "5/5"]
+
 if "rel_initialized" not in st.session_state:
     _saved = persistence.load(_cm, "th_relics")
-    if _saved and "inv_table" in _saved:
-        st.session_state["inv_table"] = _saved["inv_table"]
+    if _saved:
+        if "inv_v2" in _saved:
+            for _r in ALL_RELICS:
+                _rd = _saved["inv_v2"].get(_r, {})
+                st.session_state[f"is_{_r}"]    = _rd.get("star", "0★") if _rd.get("star", "0★") in STAR_OPTIONS else "0★"
+                st.session_state[f"il_{_r}"]    = _rd.get("leg",  "—")  if _rd.get("leg",  "—")  in ["—"] + _LEG_OPTIONS_ALL else "—"
+                st.session_state[f"ispec_{_r}"] = int(_rd.get("spec", 0) or 0)
+                st.session_state[f"iu_{_r}"]    = bool(_rd.get("use",  True))
+        elif "inv_table" in _saved:
+            _edited_rows = _saved["inv_table"].get("edited_rows", {})
+            for _i, _r in enumerate(ALL_RELICS):
+                _rd = _edited_rows.get(str(_i), {})
+                _star = _rd.get("Star") or _rd.get("Estrela", "0★")
+                _leg  = _rd.get("Leg")  or _rd.get("Perna",  "—")
+                _spec = _rd.get("Spec. shards") or _rd.get("Frag. específicos", 0)
+                _use  = _rd.get("Use?") if "Use?" in _rd else _rd.get("Usar?", True)
+                st.session_state[f"is_{_r}"]    = _star if _star in STAR_OPTIONS else "0★"
+                st.session_state[f"il_{_r}"]    = _leg  if _leg  in ["—"] + _LEG_OPTIONS_ALL else "—"
+                st.session_state[f"ispec_{_r}"] = int(_spec) if _spec else 0
+                st.session_state[f"iu_{_r}"]    = bool(_use) if _use is not None else True
     st.session_state["rel_initialized"] = True
 
 
-def _relics_save():
-    persistence.save(_cm, "th_relics", {
-        "inv_table": st.session_state.get("inv_table", {}),
-    })
+def _inv_save_all():
+    _inv_v2 = {_r: {
+        "star": st.session_state.get(f"is_{_r}", "0★"),
+        "leg":  st.session_state.get(f"il_{_r}", "—"),
+        "spec": int(st.session_state.get(f"ispec_{_r}", 0) or 0),
+        "use":  bool(st.session_state.get(f"iu_{_r}", True)),
+    } for _r in ALL_RELICS}
+    st.session_state["inv_v2"] = _inv_v2
+    persistence.save(_cm, "th_relics", {"inv_v2": _inv_v2})
 
 
 # ── Language ───────────────────────────────────────────────────────────────────
@@ -84,6 +109,20 @@ def _relic_star_idx(star_str: str, leg_str: str) -> int:
 
 def _show_relic_star(star_str: str, leg_str: str):
     show_star_image(_relic_star_idx(star_str, leg_str), _BASE, st)
+
+_RELIC_IMG_DIR = os.path.join(_BASE, "relic_imgs")
+_TIER_EMOJI    = {"Y": "🟡", "R": "🔴", "P": "🟣", "B": "⬛"}
+
+@st.cache_data
+def _load_portrait(relic_en: str):
+    fn = RELIC_IMAGES.get(relic_en)
+    if not fn:
+        return None
+    p = os.path.join(_RELIC_IMG_DIR, fn)
+    if not os.path.exists(p):
+        return None
+    from PIL import Image
+    return Image.open(p).resize((44, 44), Image.LANCZOS)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 inject_global_css()
@@ -184,58 +223,95 @@ with tab_main:
             priority        = []
             first_relays_ui = {}
 
-    # ── Inventory table ────────────────────────────────────────────────────────────
+    # ── Inventory (card layout with portraits) ─────────────────────────────────
     st.markdown("---")
     st.subheader(t("📦 Inventário de Relíquias", "📦 Relic Inventory"))
-    st.caption(t("Preencha os dados das relíquias que possui. Relíquias universais com 0 fragmentos serão ignoradas como relay.",
-                 "Fill in your relic data. Universal relics with 0 shards will be ignored as relays."))
+    st.caption(t(
+        "Preencha os dados das relíquias. Universais com 0 frags. específicos são ignoradas como relay.",
+        "Fill in your relic data. Universal relics with 0 specific shards are skipped as relays.",
+    ))
 
-    inv_rows = []
-    for relic in ALL_RELICS:
-        kind = t("Universal", "Universal") if relic in UNIVERSAL_RELICS else t("Set", "Set")
-        inv_rows.append({
-            t("Relíquia", "Relic"):          _rn(relic),
-            t("Tipo", "Type"):               kind,
-            t("Estrela", "Star"):            "0★",
-            t("Perna", "Leg"):                 "—",
-            t("Frag. específicos", "Spec. shards"): 0,
-            t("Usar?", "Use?"):              True,
-        })
+    _INV_GROUPS = [
+        (t("🔮 Universais", "🔮 Universals"), UNIVERSAL_RELICS),
+        (t("⚔️ Set: Liga",    "⚔️ Set: League"), SETS["League"]),
+        (t("🐉 Set: Horda",   "🐉 Set: Horde"),  SETS["Horde"]),
+        (t("🌿 Set: Natureza", "🌿 Set: Nature"), SETS["Nature"]),
+    ]
 
-    df_inv = pd.DataFrame(inv_rows)
+    # column header row
+    _hc0, _hc1, _hc2, _hc3, _hc4 = st.columns([1, 3, 4, 1, 1])
+    _hc1.caption(t("Relíquia", "Relic"))
+    _hc2.caption(t("Nível de Estrela · Perna", "Star Level · Leg"))
+    _hc3.caption(t("Frags.", "Shards"))
+    _hc4.caption(t("Usar?", "Use?"))
 
-    edited = st.data_editor(
-        df_inv,
-        use_container_width=True,
-        hide_index=True,
-        disabled=[t("Relíquia", "Relic"), t("Tipo", "Type")],
-        column_config={
-            t("Estrela", "Star"): st.column_config.SelectboxColumn(options=STAR_OPTIONS),
-            t("Perna", "Leg"):      st.column_config.SelectboxColumn(options=["—"] + LEG_OPTIONS),
-            t("Frag. específicos", "Spec. shards"): st.column_config.NumberColumn(min_value=0, step=1),
-            t("Usar?", "Use?"):   st.column_config.CheckboxColumn(),
-        },
-        key="inv_table",
-        on_change=_relics_save,
-    )
+    for _grp_name, _grp_relics in _INV_GROUPS:
+        st.markdown(f"**{_grp_name}**")
+        for _relic in _grp_relics:
+            _portrait = _load_portrait(_relic)
+            _c0, _c1, _c2, _c3, _c4 = st.columns([1, 3, 4, 1, 1])
+            with _c0:
+                if _portrait is not None:
+                    st.image(_portrait, width=44)
+                else:
+                    st.markdown("⚜️")
+            with _c1:
+                st.markdown(f"**{_rn(_relic)}**")
+                _rtype = t("Universal", "Universal") if _relic in UNIVERSAL_RELICS else t("Set", "Set")
+                st.caption(_rtype)
+            with _c2:
+                _star = st.selectbox(
+                    t("Estrela", "Star"), STAR_OPTIONS,
+                    key=f"is_{_relic}",
+                    on_change=_inv_save_all,
+                    label_visibility="collapsed",
+                )
+                if _star != "0★":
+                    _ci_leg, _ci_img = st.columns([2, 3])
+                    with _ci_leg:
+                        _leg = st.selectbox(
+                            t("Perna", "Leg"), ["—"] + LEG_OPTIONS,
+                            key=f"il_{_relic}",
+                            on_change=_inv_save_all,
+                            label_visibility="collapsed",
+                        )
+                    with _ci_img:
+                        _show_relic_star(_star, _leg if _leg != "—" else "1/5")
+                    st.caption(_TIER_EMOJI.get(_star[0], "⚪") + " " + _star + (" · " + _leg if _leg != "—" else ""))
+                else:
+                    if f"il_{_relic}" not in st.session_state:
+                        st.session_state[f"il_{_relic}"] = "—"
+            with _c3:
+                st.number_input(
+                    t("Frags.", "Shards"), min_value=0,
+                    key=f"ispec_{_relic}",
+                    on_change=_inv_save_all,
+                    label_visibility="collapsed",
+                )
+            with _c4:
+                st.checkbox(
+                    t("Usar?", "Use?"),
+                    key=f"iu_{_relic}",
+                    on_change=_inv_save_all,
+                    label_visibility="collapsed",
+                )
+        st.divider()
 
     # ── Run ────────────────────────────────────────────────────────────────────────
     st.markdown("---")
     if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", use_container_width=True):
-        # Build inv dict from edited table
+        # Build inv dict from per-relic session state
         relics_dict = {}
-        for _, row in edited.iterrows():
-            name    = _rn_en(row[t("Relíquia", "Relic")])
-            star    = row[t("Estrela", "Star")]
-            leg_raw = row[t("Perna", "Leg")]
-            leg     = leg_raw if leg_raw != "—" else "1/5"
-            _spec_raw = row[t("Frag. específicos", "Spec. shards")]
-            spec    = int(_spec_raw) if _spec_raw == _spec_raw else 0  # NaN guard
-            can_use = bool(row[t("Usar?", "Use?")])
-            relics_dict[name] = {
-                "star_idx":        star_leg_to_idx(star, leg),
-                "specific_shards": spec,
-                "can_use":         can_use,
+        for _rr in ALL_RELICS:
+            _star_v   = st.session_state.get(f"is_{_rr}", "0★")
+            _leg_raw  = st.session_state.get(f"il_{_rr}", "—")
+            _leg_v    = _leg_raw if _leg_raw != "—" else "1/5"
+            _spec_v   = int(st.session_state.get(f"ispec_{_rr}", 0) or 0)
+            _can_use  = bool(st.session_state.get(f"iu_{_rr}", True))
+            relics_dict[_rr] = {
+                "star_idx":        star_leg_to_idx(_star_v, _leg_v),
+                "specific_shards": _spec_v,
+                "can_use":         _can_use,
             }
 
         target_level = star_leg_to_idx(tgt_star, tgt_leg)
