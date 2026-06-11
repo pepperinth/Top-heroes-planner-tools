@@ -114,6 +114,18 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
                 picked_d = st.selectbox(f"#{i+1}", _set_disp, index=i, key=f"prio_{i}")
                 priority.append(_rn_en(picked_d))
 
+        st.divider()
+        st.markdown(t("**Primeira relay por alvo** *(opcional — a semente trocará com ela primeiro)*",
+                      "**First relay per target** *(optional — the seed swaps into it first)*"))
+        _fr_opts  = ["—"] + [_rn(r) for r in UNIVERSAL_RELICS]
+        _fr_cols  = st.columns(len(set_relics))
+        first_relays_ui: dict = {}
+        for i, (col, tgt) in enumerate(zip(_fr_cols, set_relics)):
+            with col:
+                fr_d = st.selectbox(_rn(tgt), _fr_opts, index=0, key=f"fr_{i}")
+                if fr_d != "—":
+                    first_relays_ui[tgt] = _rn_en(fr_d)
+
     else:  # single relic mode
         s1, s2, s3, s4 = st.columns(4)
         with s1:
@@ -139,8 +151,9 @@ with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=Tr
             inter2_sr = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + _univ_disp_sr, index=0, key="sr_inter2")
             inter1     = _rn_en(inter1_sr)
             inter2_val = _rn_en(inter2_sr) if inter2_sr != "—" else ""
-        target_set = ""
-        priority   = []
+        target_set      = ""
+        priority        = []
+        first_relays_ui = {}
 
 # ── Inventory table ────────────────────────────────────────────────────────────
 st.markdown("---")
@@ -210,6 +223,7 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
             "inter2":        inter2_val,
             "target_level":  target_level,
             "hammers_avail": hammers,
+            "first_relays":  first_relays_ui,
         },
     }
 
@@ -254,12 +268,76 @@ if st.button(f"🔍 {t('Calcular rota', 'Calculate route')}", type="primary", us
         if route.get("assignment"):
             st.markdown(t("**Atribuição dos relays obrigatórios:**",
                           "**Mandatory relay assignment:**"))
-            for t_idx, mname in sorted(route["assignment"].items()):
-                if t_idx < len(route["targets"]):
-                    st.markdown(f"- **{_rn(mname)}** → {_rn(route['targets'][t_idx])}")
+            for tname, mlist in sorted(route["assignment"].items()):
+                for mname in mlist:
+                    st.markdown(f"- **{_rn(mname)}** → {_rn(tname)}")
 
         if route.get("suboptimal_note"):
             st.warning(route["suboptimal_note"])
+
+        opt = route.get("optimal_result")
+        if opt:
+            with st.expander(t("🏆 Resultado ótimo (sem restrições do usuário)",
+                               "🏆 Optimal result (no user constraints)")):
+                # Per-target summary for optimal
+                opt_rows = []
+                for tgt in opt["targets"]:
+                    orig  = relics_dict.get(tgt, {}).get("star_idx", 0)
+                    final = opt["final_levels"].get(tgt, orig)
+                    fs, fl_s = idx_to_star_leg(final)
+                    os_, ol  = idx_to_star_leg(orig)
+                    reached  = final >= target_level
+                    missing  = shards_needed(final, target_level) if not reached else 0
+                    opt_rows.append({
+                        t("Relíquia", "Relic"):  _rn(tgt),
+                        t("Antes", "Before"):    f"{os_} {ol}",
+                        t("Depois", "After"):    f"{fs} {fl_s}",
+                        t("Meta", "Goal"):       "✅" if reached else f"❌ (-{missing:,})",
+                    })
+                st.dataframe(pd.DataFrame(opt_rows), use_container_width=True, hide_index=True)
+
+                oc1, oc2, oc3 = st.columns(3)
+                oc1.metric(t("Martelos usados", "Hammers used"),
+                           f"{opt['hammers_used']} / {hammers}")
+                oc2.metric(t("Fragmentos universais usados", "Universal shards used"),
+                           f"{opt['universal_used']:,} / {univ:,}")
+                oc3.metric(t("Saldo universal", "Universal balance"),
+                           f"{univ - opt['universal_used']:,}")
+
+                if opt.get("assignment"):
+                    st.markdown(t("**Atribuição dos relays:**", "**Relay assignment:**"))
+                    for tname, mlist in sorted(opt["assignment"].items()):
+                        for mname in mlist:
+                            st.markdown(f"- **{_rn(mname)}** → {_rn(tname)}")
+
+                with st.expander(t("📋 Passo a passo ótimo", "📋 Optimal step by step")):
+                    opt_step_rows = []
+                    opt_step_num  = 0
+                    for step in opt["steps"]:
+                        if step["type"] == "swap":
+                            a_s, a_l = idx_to_star_leg(step["a_from"])
+                            b_s, b_l = idx_to_star_leg(step["b_to"])
+                            opt_step_rows.append({
+                                "#":                         "🔨",
+                                t("Ação", "Action"):          t("Swap", "Swap"),
+                                t("Relíquia A", "Relic A"):   f"{_rn(step['relic_a'])} ({a_s} {a_l})",
+                                t("Relíquia B", "Relic B"):   f"{_rn(step['relic_b'])} ({b_s} {b_l})",
+                                t("Frag. esp.", "Sp. shards"): "—",
+                                t("Frag. univ.", "Univ. shards"): "—",
+                            })
+                        else:
+                            opt_step_num += 1
+                            f_s, f_l = idx_to_star_leg(step["from"])
+                            t_s, t_l = idx_to_star_leg(step["to"])
+                            opt_step_rows.append({
+                                "#":                         opt_step_num,
+                                t("Ação", "Action"):          f"{t('Desenvolver','Develop')} → {t_s} {t_l}",
+                                t("Relíquia A", "Relic A"):   _rn(step["relic"]),
+                                t("Relíquia B", "Relic B"):   f"{f_s} {f_l} → {t_s} {t_l}",
+                                t("Frag. esp.", "Sp. shards"): step["sp_used"] or "—",
+                                t("Frag. univ.", "Univ. shards"): step["u_used"] or "—",
+                            })
+                    st.dataframe(pd.DataFrame(opt_step_rows), use_container_width=True, hide_index=True)
 
         # ── Impacto nos Eventos Regulares ─────────────────────────────────────
         st.markdown("---")

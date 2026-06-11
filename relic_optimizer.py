@@ -1,8 +1,16 @@
 """
 Relic Calculator v2 — Optimization Engine
 ==========================================
-Chain-routing model: each universal relic donates its own specific shards
-to a chain that accumulates star levels before reaching the target.
+Chain model: develop seed → swap → develop relay → ... → swap → develop target.
+
+Fragment rules:
+  - Chain steps (seed/relay): specific shards first, then only enough universals
+    to complete the current leg boundary. No specific shards left on swap.
+  - Target step: specific shards first, then maximize universals up to target goal.
+  - Post-chain: remaining universals maximized across all undeveloped targets.
+
+Mandatory relics (inter1/inter2): placed in any chain position (seed or relay).
+Tool warns if a different choice would give a better result.
 
 Usage:
     py relic_optimizer.py
@@ -13,7 +21,6 @@ Requires:
 """
 
 import sys
-import copy
 from itertools import combinations, permutations
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -97,7 +104,6 @@ ALL_SET_RELICS = [r for relics in SETS.values() for r in relics]
 ALL_RELICS     = UNIVERSAL_RELICS + ALL_SET_RELICS
 
 RELIC_NAME_PT = {
-    # Universais
     "Duke's Signet Ring":   "Anel Sinete do Duque",
     "Eternal Wings":        "Asas Eternas",
     "Frost Diadem":         "Diadema de Gelo",
@@ -108,15 +114,12 @@ RELIC_NAME_PT = {
     "Persecution":          "Perseguição",
     "Anti-Magic Handcuffs": "Algemas Anti-Magia",
     "Moonstone":            "Pedra da Lua",
-    # Set — Liga
     "Petrification Staff":  "Cajado de Petrificação",
     "Soul Guard Orb":       "Orbe Guardião da Alma",
     "Feather of the Pact":  "Pena do Pacto",
-    # Set — Horda
     "Thunder Judgment":     "Julgamento do Trovão",
     "Dragonheart":          "Coração de Dragão",
     "Dragonbone Amulet":    "Amuleto de Osso de Dragão",
-    # Set — Natureza
     "Vineborne Bow":        "Arco da Videira",
     "Undefeated Crown":     "Coroa Invicta",
     "Sacred Scroll":        "Pergaminho Sagrado",
@@ -177,63 +180,90 @@ def read_inventory(filepath: str) -> dict:
     }
 
 
-# ── Chain development functions ────────────────────────────────────────────────
+# ── Fragment development ───────────────────────────────────────────────────────
 
-def chain_develop(from_level: int, specific_shards: int, universal_avail: int) -> tuple:
+def chain_develop_options(from_level: int, specific_shards: int, universal_avail: int) -> list:
     """
-    Relay relic development.  Add the minimum universals needed so that ALL
-    specific_shards are consumed before the next hammer swap.
+    Return candidate (level, sp_used, u_used) outcomes for chain development.
 
-    Finds the first level boundary whose shard cost >= specific_shards, then
-    tops up with universals.  Falls back to best-effort if universals are short.
-
-    Returns (achieved_level, sp_used, u_used).
+    Up to two candidates:
+      A) Highest leg boundary reachable with 0 universals (may waste some sp).
+      B) First leg boundary that uses ALL specific shards (costs minimum universals).
+    Returns one candidate when A == B, or falls back to best-effort when
+    neither A nor B is feasible.
     """
-    if specific_shards <= 0 or from_level >= 100:
-        return from_level, 0, 0
+    if from_level >= 100 or (specific_shards <= 0 and universal_avail <= 0):
+        return [(from_level, 0, 0)]
 
     from_cumul = CUMUL[from_level]
+    candidates = []
 
-    for lv in range(from_level + 1, 101):
-        cost = CUMUL[lv] - from_cumul
-        if cost >= specific_shards:
-            u_needed = cost - specific_shards
-            if u_needed <= universal_avail:
-                return lv, specific_shards, u_needed
-            break  # cannot afford even this first boundary → best-effort
+    if specific_shards > 0:
+        # Option A: highest boundary reachable with 0 universals
+        best_0u_lv, best_0u_sp = from_level, 0
+        for lv in range(from_level + 1, 101):
+            cost = CUMUL[lv] - from_cumul
+            if cost <= specific_shards:
+                best_0u_lv, best_0u_sp = lv, cost
+            else:
+                break
+        if best_0u_lv > from_level:
+            candidates.append((best_0u_lv, best_0u_sp, 0))
 
-    # Best-effort: spend all specific + available universals
-    total = specific_shards + universal_avail
-    best  = from_level
-    for lv in range(from_level + 1, 101):
-        if CUMUL[lv] - from_cumul <= total:
-            best = lv
-        else:
-            break
-    if best == from_level:
-        return from_level, 0, 0
-    cost_best = CUMUL[best] - from_cumul
-    sp_used   = min(specific_shards, cost_best)
-    u_used    = cost_best - sp_used
-    return best, sp_used, u_used
+        # Option B: first boundary where cost >= sp (uses all sp + min universals)
+        for lv in range(from_level + 1, 101):
+            cost = CUMUL[lv] - from_cumul
+            if cost >= specific_shards:
+                u_needed = cost - specific_shards
+                if u_needed <= universal_avail and lv != best_0u_lv:
+                    candidates.append((lv, specific_shards, u_needed))
+                break
+
+    # Fallback: best-effort spending all available resources
+    if not candidates:
+        total = specific_shards + universal_avail
+        best  = from_level
+        for lv in range(from_level + 1, 101):
+            if CUMUL[lv] - from_cumul <= total:
+                best = lv
+            else:
+                break
+        if best > from_level:
+            cost    = CUMUL[best] - from_cumul
+            sp_used = min(specific_shards, cost)
+            u_used  = cost - sp_used
+            candidates.append((best, sp_used, u_used))
+
+    return candidates if candidates else [(from_level, 0, 0)]
 
 
-def develop_final(from_level: int, specific_shards: int, universal_budget: int,
-                  cap: int = 100) -> tuple:
+def chain_develop(from_level: int, specific_shards: int, universal_avail: int) -> tuple:
+    """Single-result wrapper — returns the min-universal option from chain_develop_options."""
+    opts = chain_develop_options(from_level, specific_shards, universal_avail)
+    # Prefer the option with the highest level; break ties by lowest u
+    return max(opts, key=lambda o: (o[0], -o[2]))
+
+
+def develop_max(from_level: int, specific_shards: int, universal_budget: int,
+                cap: int = 100) -> tuple:
     """
-    Target development: spend specific_shards then universals up to `cap` level.
-    Capping at the target goal saves universals for other targets in the chain.
+    Develop a relic using ALL available resources up to `cap`.
+    No leg constraint — maximize the final level.
+
+    Used for: target development after receiving chain level, and post-chain
+    top-up of all targets.
 
     Returns (achieved_level, sp_used, u_used).
     """
     if from_level >= cap or from_level >= 100:
         return from_level, 0, 0
-    total      = specific_shards + universal_budget
+    total = specific_shards + universal_budget
     if total <= 0:
         return from_level, 0, 0
-    best       = from_level
-    from_cumul = CUMUL[from_level]
-    for lv in range(from_level + 1, min(cap, 100) + 1):
+    effective_cap = min(cap, 100)
+    from_cumul    = CUMUL[from_level]
+    best          = from_level
+    for lv in range(from_level + 1, effective_cap + 1):
         if CUMUL[lv] - from_cumul <= total:
             best = lv
         else:
@@ -249,162 +279,240 @@ def develop_final(from_level: int, specific_shards: int, universal_budget: int,
 # ── Chain simulation ───────────────────────────────────────────────────────────
 
 def simulate_chain(
-    seed_name: str, seed_level: int, seed_specific: int,
-    relay_specs: list,          # [(name, orig_level, specific_shards), ...]
-    target_name: str, target_orig_level: int, target_specific: int,
-    universal_pool: int,
-    target_goal: int = 100,
+    chain_relics:      list,
+    target_name:       str,
+    target_orig_level: int,
+    target_specific:   int,
+    universal_pool:    int,
+    target_goal:       int = 100,
 ) -> tuple:
     """
-    Simulate: develop seed → swap → develop relay → swap → ... → target.
+    Simulate a Miracle Hammer chain, trying all combinations of development
+    options (0-universal stop vs min-universal stop) at every relay position.
 
-    Each relic is developed (specific shards + min universals) BEFORE donating
-    its level to the next via Miracle Hammer swap.  This way every relic in
-    the chain starts higher than it would without prior development.
+    chain_relics: [(name, orig_level, specific_shards), ...]
+                  Position 0 is the seed; remaining entries are relays.
 
-      seed develops  → swap  → relay develops  → swap  → ... → target develops
-
-    Returns (final_target_level, u_total_used, steps_list).
+    Returns (final_target_level, total_u_used, steps), or None if no valid
+    chain exists (every path would downgrade the target).
     """
-    current_level   = seed_level
-    current_carrier = seed_name
-    remaining_u     = universal_pool
-    steps           = []
+    if not chain_relics:
+        return None
 
-    # Develop seed first so it donates the highest possible level
-    if seed_specific > 0 and current_level < 100:
-        achieved, sp_used, u_used = chain_develop(current_level, seed_specific, remaining_u)
-        if achieved > current_level:
-            steps.append({
+    best_lv = -1
+    best_u  = float("inf")
+    best_st = None
+    work    = []   # mutable step buffer; copied only when a new best is found
+
+    def dfs(relic_idx: int, carrier_level: int, carrier_name: str, remaining_u: int):
+        nonlocal best_lv, best_u, best_st
+
+        if relic_idx == len(chain_relics):
+            # All relays done — final swap to target
+            if carrier_level <= target_orig_level:
+                return
+            swap = {
+                "type":     "swap",
+                "relic_a":  carrier_name, "a_from": carrier_level,     "a_to": target_orig_level,
+                "relic_b":  target_name,  "b_from": target_orig_level, "b_to": carrier_level,
+            }
+            achieved, sp_used, u_used = develop_max(
+                carrier_level, target_specific, remaining_u, cap=target_goal
+            )
+            dev = {
                 "type":    "develop",
-                "relic":   seed_name,
-                "from":    current_level, "to":      achieved,
+                "relic":   target_name,
+                "from":    carrier_level, "to":      achieved,
                 "sp_used": sp_used,       "u_used":  u_used,
-            })
-            remaining_u   -= u_used
-            current_level  = achieved
+            }
+            total_u = (universal_pool - remaining_u) + u_used
+            if achieved > best_lv or (achieved == best_lv and total_u < best_u):
+                best_lv = achieved
+                best_u  = total_u
+                best_st = work[:] + [swap, dev]
+            return
 
-    for (name, orig_level, specific) in relay_specs:
-        # Hammer swap
-        steps.append({
+        name, orig_level, specific = chain_relics[relic_idx]
+        incoming = carrier_level
+        swap = {
             "type":     "swap",
-            "relic_a":  current_carrier, "a_from": current_level,  "a_to": orig_level,
-            "relic_b":  name,            "b_from": orig_level,     "b_to": current_level,
-        })
-        incoming        = current_level
-        current_carrier = name
+            "relic_a":  carrier_name, "a_from": carrier_level, "a_to": orig_level,
+            "relic_b":  name,         "b_from": orig_level,    "b_to": carrier_level,
+        }
 
-        # Relay develops (exhaust specific shards)
-        achieved, sp_used, u_used = chain_develop(incoming, specific, remaining_u)
-        steps.append({
-            "type":    "develop",
-            "relic":   name,
-            "from":    incoming, "to":      achieved,
-            "sp_used": sp_used,  "u_used":  u_used,
-        })
-        remaining_u   -= u_used
-        current_level  = achieved
+        for achieved, sp_used, u_used in chain_develop_options(incoming, specific, remaining_u):
+            dev = {
+                "type":    "develop",
+                "relic":   name,
+                "from":    incoming, "to":      achieved,
+                "sp_used": sp_used,  "u_used":  u_used,
+            }
+            work.append(swap)
+            work.append(dev)
+            dfs(relic_idx + 1, achieved, name, remaining_u - u_used)
+            work.pop()
+            work.pop()
 
-    # Final hammer swap to target
-    steps.append({
-        "type":    "swap",
-        "relic_a": current_carrier, "a_from": current_level,       "a_to": target_orig_level,
-        "relic_b": target_name,     "b_from": target_orig_level,   "b_to": current_level,
-    })
-    incoming_target = current_level
+    # ── Seed development ──────────────────────────────────────────────────────
+    seed_name, seed_level, seed_specific = chain_relics[0]
 
-    # Target develops up to target_goal (saves excess universals for other chains)
-    achieved, sp_used, u_used = develop_final(incoming_target, target_specific, remaining_u,
-                                               cap=target_goal)
-    steps.append({
-        "type":    "develop",
-        "relic":   target_name,
-        "from":    incoming_target, "to":      achieved,
-        "sp_used": sp_used,         "u_used":  u_used,
-    })
-    remaining_u -= u_used
+    if seed_specific > 0 and seed_level < 100:
+        any_launched = False
+        for achieved, sp_used, u_used in chain_develop_options(seed_level, seed_specific, universal_pool):
+            if achieved > seed_level:
+                dev = {
+                    "type":    "develop",
+                    "relic":   seed_name,
+                    "from":    seed_level, "to":      achieved,
+                    "sp_used": sp_used,    "u_used":  u_used,
+                }
+                work.append(dev)
+                dfs(1, achieved, seed_name, universal_pool - u_used)
+                work.pop()
+                any_launched = True
+        if not any_launched:
+            dfs(1, seed_level, seed_name, universal_pool)
+    else:
+        dfs(1, seed_level, seed_name, universal_pool)
 
-    return achieved, universal_pool - remaining_u, steps
+    return (best_lv, best_u, best_st) if best_lv >= 0 else None
 
 
 # ── Per-target chain optimizer ─────────────────────────────────────────────────
 
 def best_chain_for_target(
-    seed_name: str, seed_level: int, seed_specific: int,
-    mandatory_relay,        # (name, orig_level, specific) or None
-    other_relays: list,     # [(name, orig_level, specific), ...]
-    n_relays: int,          # relay slots = hammers - 1
-    target_name: str, target_orig_level: int, target_specific: int,
-    universal_pool: int,
-    target_goal: int = 100,
+    available_relics: list,
+    mandatory_names:  set,
+    n_hammers:        int,
+    target_name:      str,
+    target_level:     int,
+    target_specific:  int,
+    universal_pool:   int,
+    target_goal:      int,
+    first_relay:      str = None,
 ) -> tuple:
     """
-    Try all permutations of (mandatory + best optional) relays.
-    Returns (best_level, best_u_used, best_relay_order, best_steps).
+    Find the best chain for this target by trying all valid permutations.
+
+    available_relics: [(name, level, specific), ...] — eligible universals
+    mandatory_names:  names that MUST appear somewhere in the chain
+    n_hammers:        swaps to use (= number of relics before target)
+    first_relay:      if set, this relic is fixed at relay position 0
+                      (chain_relics[1]); the seed swaps into it first.
+
+    Returns (best_level, best_u, best_steps), or (-1, inf, None).
     """
-    best_lv    = -1
-    best_u     = float("inf")
-    best_order = None
-    best_steps = None
+    if n_hammers <= 0:
+        return -1, float("inf"), None
 
-    n_mandatory = 1 if mandatory_relay else 0
-    n_optional  = max(0, min(n_relays - n_mandatory, len(other_relays)))
+    best_lv = -1
+    best_u  = float("inf")
+    best_st = None
 
-    def evaluate(relay_order):
-        nonlocal best_lv, best_u, best_order, best_steps
-        lv, u, steps = simulate_chain(
-            seed_name, seed_level, seed_specific, relay_order,
-            target_name, target_orig_level, target_specific,
-            universal_pool, target_goal,
-        )
+    def try_chain(chain):
+        nonlocal best_lv, best_u, best_st
+        res = simulate_chain(chain, target_name, target_level, target_specific,
+                             universal_pool, target_goal)
+        if res is None:
+            return
+        lv, u, steps = res
         if lv > best_lv or (lv == best_lv and u < best_u):
-            best_lv, best_u, best_order, best_steps = lv, u, list(relay_order), steps
+            best_lv, best_u, best_st = lv, u, steps
 
-    # n_relays == 0: seed swaps directly with target (no relay development)
-    if n_relays == 0:
-        evaluate([])
-        return best_lv, best_u, best_order, best_steps
+    def done(): return best_lv >= target_goal
 
-    for opt_combo in combinations(other_relays, n_optional):
-        relays = ([mandatory_relay] if mandatory_relay else []) + list(opt_combo)
-        for perm in permutations(relays):
-            evaluate(list(perm))
+    if first_relay:
+        if n_hammers < 2:
+            return -1, float("inf"), None
+        fr_relic = next((r for r in available_relics if r[0] == first_relay), None)
+        if fr_relic is None:
+            return -1, float("inf"), None
+        rest      = [r for r in available_relics if r[0] != first_relay]
+        rest_mand = [r for r in rest if r[0] in mandatory_names]
+        rest_opt  = [r for r in rest if r[0] not in mandatory_names]
+        rest_opt  = sorted(rest_opt, key=lambda r: r[1] + r[2], reverse=True)[:4]
+        n_rest    = n_hammers - 1   # slots for seed + remaining relays
+        n_mand_r  = len(rest_mand)
+        if n_mand_r > n_rest:
+            for sub in combinations(rest_mand, n_rest):
+                for pre in permutations(sub):
+                    try_chain([pre[0], fr_relic] + list(pre[1:]))
+                    if done(): return best_lv, best_u, best_st
+        else:
+            n_opt_need = n_rest - n_mand_r
+            for n_pick in range(min(n_opt_need, len(rest_opt)), -1, -1):
+                for opt_c in combinations(rest_opt, n_pick):
+                    pool = rest_mand + list(opt_c)
+                    if not pool:   # need at least the seed
+                        continue
+                    for pre in permutations(pool):
+                        try_chain([pre[0], fr_relic] + list(pre[1:]))
+                        if done(): return best_lv, best_u, best_st
+                if best_lv >= 0:
+                    break
+    else:
+        mandatory = [r for r in available_relics if r[0] in mandatory_names]
+        optional  = [r for r in available_relics if r[0] not in mandatory_names]
+        optional  = sorted(optional, key=lambda r: r[1] + r[2], reverse=True)[:4]
+        n_mand    = len(mandatory)
+        if n_mand > n_hammers:
+            for subset in combinations(mandatory, n_hammers):
+                for perm in permutations(subset):
+                    try_chain(list(perm))
+                    if done(): return best_lv, best_u, best_st
+        else:
+            n_opt_need = n_hammers - n_mand
+            for n_pick in range(min(n_opt_need, len(optional)), -1, -1):
+                for opt_combo in combinations(optional, n_pick):
+                    pool = mandatory + list(opt_combo)
+                    for perm in permutations(pool):
+                        try_chain(list(perm))
+                        if done(): return best_lv, best_u, best_st
+                if best_lv >= 0:
+                    break
 
-    # Fallback: try fewer optionals if nothing worked
-    if best_lv < 0:
-        for fewer in range(n_optional - 1, -1, -1):
-            for opt_combo in combinations(other_relays, fewer):
-                relays = ([mandatory_relay] if mandatory_relay else []) + list(opt_combo)
-                for perm in permutations(relays):
-                    evaluate(list(perm))
-            if best_lv >= 0:
-                break
-
-    return best_lv, best_u, best_order, best_steps
+    return best_lv, best_u, best_st
 
 
 # ── Route scoring ──────────────────────────────────────────────────────────────
 
-def score_route(final_levels: dict, targets: list, target_goal: int) -> int:
+def score_route(
+    final_levels:   dict,
+    final_specific: dict,
+    targets:        list,
+    target_goal:    int,
+    universal_init: int,
+    universal_used: int,
+) -> int:
     """
-    Higher score = better route.
-    Each target contributes min(level, target_goal) × priority_weight.
-    Capping at target_goal means over-developing one relic (past goal) gives
-    no advantage over using those universals for a lower-priority target.
+    Priority-weighted sum of capped target levels, including simulated
+    post-chain development with remaining universals.
     """
+    levels   = dict(final_levels)
+    specific = dict(final_specific)
+    remaining = universal_init - universal_used
+    for t in targets:
+        cur = levels.get(t, 0)
+        if cur >= target_goal or remaining <= 0:
+            continue
+        sp = specific.get(t, 0)
+        new_lv, sp_use, u_use = develop_max(cur, sp, remaining, cap=target_goal)
+        levels[t]   = new_lv
+        specific[t] = max(0, sp - sp_use)
+        remaining  -= u_use
+
     score = 0
-    n = len(targets)
+    n     = len(targets)
     for i, t in enumerate(targets):
-        lv = min(final_levels.get(t, 0), target_goal)
-        w  = (n - i)
-        score += w * lv
+        lv = min(levels.get(t, 0), target_goal)
+        score += (n - i) * lv
     return score
 
 
-# ── Main route computation ─────────────────────────────────────────────────────
+# ── Enumeration helpers ────────────────────────────────────────────────────────
 
 def _gen_all_splits(total: int, n: int):
-    """All non-negative integer tuples of length n that sum to total."""
+    """All non-negative integer tuples of length n summing to total."""
     if n == 1:
         yield (total,)
         return
@@ -413,23 +521,117 @@ def _gen_all_splits(total: int, n: int):
             yield (h,) + rest
 
 
-def _mandatory_assignments(mandatory_names: list, split: tuple):
+def _gen_mandatory_assignments(mandatory_names: list, targets: list, split: tuple):
     """
-    Yield the fixed assignment: mandatory_names[i] → chain i.
-    inter1 always goes to the highest-priority target's chain,
-    inter2 to the second-priority chain, etc.
-    Chains with h < 2 cannot receive a mandatory; those splits are skipped.
+    Yield all valid ways to assign mandatory relics to target chains.
+    Each mandatory is assigned to exactly one target that has ≥ 1 hammer.
+    A target receives at most as many mandatories as its hammer count.
+    Yields dict {target_name: [mandatory_names...]}.
     """
     if not mandatory_names:
         yield {}
         return
-    assignment: dict = {}
-    for i, mname in enumerate(mandatory_names):
-        if i >= len(split) or split[i] < 2:
-            return  # this split can't accommodate the mandatory → skip
-        assignment[i] = [mname]
-    yield assignment
 
+    eligible = [(t, h) for t, h in zip(targets, split) if h > 0]
+    if not eligible:
+        return
+
+    def assign(idx, current):
+        if idx == len(mandatory_names):
+            yield {k: list(v) for k, v in current.items() if v}
+            return
+        mname = mandatory_names[idx]
+        for t, h in eligible:
+            if len(current.get(t, [])) >= h:
+                continue  # target already has as many mandatories as its hammers
+            current.setdefault(t, []).append(mname)
+            yield from assign(idx + 1, current)
+            current[t].pop()
+            if not current[t]:
+                del current[t]
+
+    yield from assign(0, {})
+
+
+# ── Configuration evaluator ────────────────────────────────────────────────────
+
+def _evaluate_config(
+    targets:        list,
+    split:          tuple,
+    mand_assign:    dict,
+    levels_init:    dict,
+    specific_init:  dict,
+    universal_init: int,
+    target_goal:    int,
+    first_relays:   dict = None,
+) -> tuple:
+    """
+    Simulate all chains for one (split, mandatory_assignment) combination.
+
+    first_relays: optional {target_name: relay_name} — fixes the first relay
+    position for each target's chain.
+
+    Returns (score, result_dict), or (None, None) if any required chain fails.
+    """
+    levels    = dict(levels_init)
+    specific  = dict(specific_init)
+    universal = universal_init
+    all_steps = []
+    used      = set(targets)
+    total_h   = 0
+    total_u   = 0
+
+    for target, h in zip(targets, split):
+        if h == 0:
+            continue
+
+        chain_mand = set(mand_assign.get(target, []))
+        available  = [
+            (r, levels[r], specific.get(r, 0))
+            for r in UNIVERSAL_RELICS
+            if r not in used
+        ]
+        fr = (first_relays or {}).get(target)
+
+        lv, u, steps = best_chain_for_target(
+            available, chain_mand, h,
+            target, levels[target], specific.get(target, 0),
+            universal, target_goal,
+            first_relay=fr,
+        )
+
+        if steps is None:
+            return None, None
+
+        all_steps += steps
+        total_h   += h
+        total_u   += u
+        universal -= u
+
+        for step in steps:
+            if step["type"] == "swap":
+                used.add(step["relic_a"])            # outgoing carrier = chain relic
+                levels[step["relic_a"]] = step["a_to"]
+                levels[step["relic_b"]] = step["b_to"]
+            elif step["type"] == "develop":
+                r = step["relic"]
+                levels[r]   = step["to"]
+                specific[r] = max(0, specific[r] - step["sp_used"])
+
+    sc = score_route(levels, specific, targets, target_goal, universal_init, total_u)
+    return sc, {
+        "steps":          all_steps,
+        "final_levels":   levels,
+        "final_specific": specific,
+        "hammers_used":   total_h,
+        "universal_used": total_u,
+        "targets":        list(targets),
+        "assignment":     dict(mand_assign),
+        "suboptimal_note": "",
+    }
+
+
+# ── Main route computation ─────────────────────────────────────────────────────
 
 def compute_route(inv: dict) -> dict:
     cfg           = inv["config"]
@@ -438,19 +640,13 @@ def compute_route(inv: dict) -> dict:
 
     levels_init    = {r: inv["relics"].get(r, {}).get("star_idx",        0) for r in ALL_RELICS}
     specific_init  = {r: inv["relics"].get(r, {}).get("specific_shards", 0) for r in ALL_RELICS}
-    can_use_init   = {r: inv["relics"].get(r, {}).get("can_use", True)      for r in ALL_RELICS}
     universal_init = inv["universal_shards"]
 
-    # Mandatory relay names from user config
-    inter1 = cfg["inter1"] if cfg["inter1"] in UNIVERSAL_RELICS else PREFERRED_INTER[0]
-    inter2 = cfg["inter2"] if cfg["inter2"] in UNIVERSAL_RELICS else ""
-    mandatory_names = [i for i in [inter1, inter2] if i and i in UNIVERSAL_RELICS]
-
-    # Ordered targets (skip those already at goal)
+    # Targets in priority order, skipping those already at goal
     if cfg["target_set"] in SETS:
         set_relics = SETS[cfg["target_set"]]
-        ordered    = [p for p in cfg["priority"] if p in set_relics]
-        ordered   += [r for r in set_relics if r not in ordered]
+        priority   = [p for p in cfg["priority"] if p in set_relics]
+        ordered    = priority + [r for r in set_relics if r not in priority]
         targets    = [r for r in ordered if levels_init.get(r, 0) < target_goal]
     elif cfg["target_relic"] and cfg["target_relic"] in ALL_RELICS:
         targets = ([cfg["target_relic"]]
@@ -458,198 +654,108 @@ def compute_route(inv: dict) -> dict:
     else:
         targets = []
 
-    all_targets = targets
+    all_targets = targets[:]
 
+    empty = {
+        "steps": [], "final_levels": dict(levels_init),
+        "final_specific": dict(specific_init),
+        "hammers_used": 0, "universal_used": 0,
+        "targets": all_targets, "suboptimal_note": "",
+    }
     if not targets:
-        return {
-            "steps": [], "final_levels": dict(levels_init),
-            "final_specific": dict(specific_init),
-            "hammers_used": 0, "universal_used": 0, "targets": all_targets,
-            "suboptimal_note": "",
-        }
+        return empty
 
-    # Seeds: prefer high level + high specific shards.
-    # Seeds now develop their specific shards BEFORE donating their level,
-    # so more specific shards = higher donation = better seed.
-    # can_use=False relics are deprioritised but still eligible.
-    def seed_score(r):
-        prefer = 1 if can_use_init.get(r, True) else 0
-        return prefer * 1000 + levels_init.get(r, 0) * 10 + specific_init.get(r, 0)
+    inter1 = cfg.get("inter1", "")
+    inter2 = cfg.get("inter2", "")
+    inter1 = inter1 if inter1 in UNIVERSAL_RELICS else PREFERRED_INTER[0]
+    inter2 = inter2 if inter2 in UNIVERSAL_RELICS else ""
+    mandatory_names = [i for i in [inter1, inter2] if i]
 
-    seed_pool  = sorted([r for r in UNIVERSAL_RELICS if r not in targets],
-                        key=seed_score, reverse=True)
+    first_relays = {k: v for k, v in cfg.get('first_relays', {}).items() if v}
 
-    # Relay pool: can_use=True relics first, can_use=False last (avoid but don't exclude).
-    relay_pool = sorted(
-        [r for r in UNIVERSAL_RELICS
-         if specific_init.get(r, 0) > 0 and r not in targets],
-        key=lambda r: (0 if can_use_init.get(r, True) else 1),
-    )
+    def _search(mandatory, fr=None):
+        best_sc  = -1
+        best_res = None
+        for split in _gen_all_splits(hammers_avail, len(targets)):
+            for mand_assign in _gen_mandatory_assignments(mandatory, targets, split):
+                sc, res = _evaluate_config(
+                    targets, split, mand_assign,
+                    levels_init, specific_init, universal_init, target_goal,
+                    first_relays=fr,
+                )
+                if res is None:
+                    continue
+                if sc > best_sc or (sc == best_sc
+                                    and res["universal_used"] < best_res["universal_used"]):
+                    best_sc, best_res = sc, res
+        return best_sc, best_res
 
-    best_score  = -1
-    best_result = None
-
-    def _evaluate_config(split, assignment):
-        """
-        Run chains for one (split, assignment) combination.
-        assignment: {target_idx: mandatory_relay_name}
-        Returns (score, result_dict) or (None, None) if invalid.
-        """
-        levels    = dict(levels_init)
-        specific  = dict(specific_init)
-        universal = universal_init
-        all_steps = []
-        used      = set()
-        total_h   = 0
-        total_u   = 0
-
-        for t_idx, (target, h) in enumerate(zip(targets, split)):
-            if h == 0:
+    def _post_chain(result):
+        """Apply post-chain universal development in-place and return the result."""
+        fl        = result["final_levels"]
+        fs        = result["final_specific"]
+        remaining = universal_init - result["universal_used"]
+        for relic in all_targets:
+            if remaining <= 0:
+                break
+            cur = fl.get(relic, 0)
+            if cur >= target_goal:
                 continue
+            sp = fs.get(relic, 0)
+            new_lv, sp_use, u_use = develop_max(cur, sp, remaining, cap=target_goal)
+            if new_lv > cur:
+                result["steps"].append({
+                    "type": "develop", "relic": relic,
+                    "from": cur, "to": new_lv,
+                    "sp_used": sp_use, "u_used": u_use,
+                })
+                fl[relic]  = new_lv
+                fs[relic]  = max(0, sp - sp_use)
+                remaining -= u_use
+                result["universal_used"] += u_use
+        return result
 
-            target_orig = levels[target]
-            target_sp   = specific[target]
-
-            # Which mandatory relays (if any) go into this chain?
-            chain_mand_names = [
-                m for m in assignment.get(t_idx, [])
-                if m not in used
-            ]
-            mandatory_specs = [
-                (m, levels[m], specific[m])
-                for m in chain_mand_names
-            ]
-
-            # All relics assigned as mandatory anywhere (to exclude from optional pool)
-            all_assigned_mandatories = {
-                m for mlist in assignment.values() for m in mlist
-            }
-
-            # Seed: highest-value available relic not already committed
-            seed_name = None
-            seed_lv   = 0
-            seed_sp   = 0
-            for sc in seed_pool:
-                if (sc not in used and sc != target
-                        and sc not in all_assigned_mandatories):
-                    seed_name = sc
-                    seed_lv   = levels[sc]
-                    seed_sp   = specific.get(sc, 0)
-                    break
-            if seed_name is None:
-                return None, None
-
-            other_relays = [
-                (r, levels[r], specific[r])
-                for r in relay_pool
-                if (r not in used and r != seed_name
-                    and r != target
-                    and r not in all_assigned_mandatories
-                    and specific.get(r, 0) > 0)
-            ]
-
-            lv, u, relay_order, steps = best_chain_for_target(
-                seed_name, seed_lv, seed_sp,
-                mandatory_specs,
-                other_relays,
-                h - 1,           # relay slots
-                target, target_orig, target_sp,
-                universal, target_goal,
-            )
-            if steps is None:
-                return None, None
-
-            all_steps += steps
-            total_h   += h
-            total_u   += u
-            universal -= u
-            used.add(seed_name)
-            for m in chain_mand_names:
-                used.add(m)
-            for (name, _, _) in (relay_order or []):
-                used.add(name)
-
-            for step in steps:
-                if step["type"] == "swap":
-                    levels[step["relic_a"]] = step["a_to"]
-                    levels[step["relic_b"]] = step["b_to"]
-                elif step["type"] == "develop":
-                    levels[step["relic"]] = step["to"]
-                    if step["relic"] in specific:
-                        specific[step["relic"]] = max(
-                            0, specific[step["relic"]] - step["sp_used"])
-
-        sc = score_route(levels, targets, target_goal)
-        result = {
-            "steps":          all_steps,
-            "final_levels":   levels,
-            "final_specific": specific,
-            "hammers_used":   total_h,
-            "universal_used": total_u,
-            "targets":        all_targets,
-            "assignment":     dict(assignment),   # which mandatory → which chain
-            "suboptimal_note": "",
-        }
-        return sc, result
-
-    for split in _gen_all_splits(hammers_avail, len(targets)):
-        for assignment in _mandatory_assignments(mandatory_names, split):
-            sc, result = _evaluate_config(split, assignment)
-            if result is None:
-                continue
-            if sc > best_score or (sc == best_score and result["universal_used"] < best_result["universal_used"]):
-                best_score  = sc
-                best_result = result
+    best_score, best_result = _search(mandatory_names, first_relays or None)
 
     if best_result is None:
-        return {
-            "steps": [], "final_levels": dict(levels_init),
-            "final_specific": dict(specific_init),
-            "hammers_used": 0, "universal_used": 0, "targets": all_targets,
-            "suboptimal_note": "",
-        }
+        return empty
 
-    # ── Post-process: spend remaining universals on targets not yet at goal ──────
-    # Seeds now use their specific shards inside the chain (before swapping),
-    # so universals saved there should flow to undeveloped targets.
-    fl = best_result["final_levels"]
-    fs = best_result["final_specific"]
-    remaining_univ = universal_init - best_result["universal_used"]
+    _post_chain(best_result)
 
-    for relic in all_targets:
-        if remaining_univ <= 0:
-            break
-        cur = fl.get(relic, 0)
-        if cur >= target_goal:
-            continue
-        sp     = fs.get(relic, 0)
-        new_lv = min(max_level_reachable(cur, sp + remaining_univ), target_goal)
-        if new_lv > cur:
-            total_cost = shards_needed(cur, new_lv)
-            sp_used    = min(sp, total_cost)
-            u_used     = total_cost - sp_used
-            best_result["steps"].append({
-                "type": "develop", "relic": relic,
-                "from": cur, "to": new_lv,
-                "sp_used": sp_used, "u_used": u_used,
-            })
-            fl[relic]  = new_lv
-            fs[relic]  = sp - sp_used
-            remaining_univ -= u_used
-            best_result["universal_used"] += u_used
+    # ── Suboptimality check ───────────────────────────────────────────────────
+    # When first_relays is set: compare against mandatory-only (no first_relay
+    # restriction) — shows whether the position constraint is costing efficiency.
+    # When only mandatory: compare against fully free — shows whether the
+    # mandatory choice is suboptimal.
+    optimal_result  = None
+    suboptimal_note = ""
 
-    # Check if user's specified inter1/inter2 assignment was suboptimal
-    if (user_assign_score is not None
-            and user_assign_score < best_score
-            and best_result["assignment"] != user_assignment):
-        opt_lines = []
-        for t_idx, name in best_result["assignment"].items():
-            if t_idx < len(targets):
-                opt_lines.append(f"  {name}  ->  chain for {targets[t_idx]}")
-        best_result["suboptimal_note"] = (
-            "NOTE: The inter1/inter2 assignment you specified is NOT the most efficient.\n"
-            "Optimal assignment:\n" + "\n".join(opt_lines)
+    if first_relays:
+        cmp_score, cmp_result = _search(mandatory_names)
+        cmp_label = "primeira relay fixada por alvo"
+    else:
+        cmp_score, cmp_result = _search([])
+        cmp_label = (f"relays obrigatórios ({', '.join(mandatory_names)})"
+                     if mandatory_names else "configuração atual")
+
+    if cmp_result is not None:
+        _post_chain(cmp_result)
+        _is_sub = (
+            cmp_score > best_score or
+            (cmp_score == best_score and
+             cmp_result["universal_used"] < best_result["universal_used"])
         )
+        if _is_sub:
+            suboptimal_note = (
+                f"Atenção: {cmp_label} não é a escolha mais eficiente. "
+                "O resultado ótimo está disponível abaixo."
+            )
+            cmp_result["suboptimal_note"] = ""
+            cmp_result["optimal_result"]  = None
+            optimal_result = cmp_result
+
+    best_result["suboptimal_note"] = suboptimal_note
+    best_result["optimal_result"]  = optimal_result
 
     return best_result
 
@@ -745,7 +851,6 @@ def write_results(filepath: str, route: dict, inv: dict):
             break
 
     if route_row:
-        # Clear stale rows
         for clear_r in range(route_row, route_row + 200):
             row_empty = True
             for ci in range(1, 11):
@@ -764,7 +869,7 @@ def write_results(filepath: str, route: dict, inv: dict):
 
             if step["type"] == "swap":
                 a_s, a_l = idx_to_star_leg(step["a_from"])
-                b_s, b_l = idx_to_star_leg(step["b_to"])   # what relic_b becomes
+                b_s, b_l = idx_to_star_leg(step["b_to"])
                 vals = [
                     "Hammer",
                     "Miracle Hammer SWAP",
@@ -780,7 +885,7 @@ def write_results(filepath: str, route: dict, inv: dict):
                 bold   = True
                 color  = "8B4513"
 
-            else:  # develop
+            else:
                 from_s, from_l = idx_to_star_leg(step["from"])
                 to_s,   to_l   = idx_to_star_leg(step["to"])
                 vals = [
@@ -836,10 +941,12 @@ def write_results(filepath: str, route: dict, inv: dict):
     print(f"  Hammers used:     {route['hammers_used']} / {inv['config']['hammers_avail']}")
     print(f"  Universal shards: {route['universal_used']} / {inv['universal_shards']}")
     if route.get("assignment"):
-        targets_list = route["targets"]
-        for t_idx, mname in sorted(route["assignment"].items()):
-            if t_idx < len(targets_list):
-                print(f"  {mname}  ->  {targets_list[t_idx]}")
+        for tname, mlist in sorted(route["assignment"].items()):
+            for mname in mlist:
+                print(f"  {mname}  ->  {tname}")
+    if route.get("suboptimal_note"):
+        print()
+        print(route["suboptimal_note"])
 
 
 # ── Main ───────────────────────────────────────────────────────────────────────
@@ -853,7 +960,7 @@ if __name__ == "__main__":
     tgt_s, tgt_l = idx_to_star_leg(cfg["target_level"])
 
     print(f"Target:   {cfg['target_set']}  ->  {tgt_s} {tgt_l}")
-    print(f"Mandatory relays: {cfg['inter1']}"
+    print(f"Mandatory relics: {cfg['inter1']}"
           + (f"  +  {cfg['inter2']}" if cfg["inter2"] else ""))
     print(f"Hammers:  {cfg['hammers_avail']}")
     print(f"Universal shards: {inv['universal_shards']}")
@@ -870,10 +977,6 @@ if __name__ == "__main__":
         goal    = "GOAL REACHED" if final >= cfg["target_level"] else ""
         print(f"  {t}: {os_} {ol}  ->  {fs} {fl}  {goal}")
     print()
-
-    if route.get("suboptimal_note"):
-        print()
-        print(route["suboptimal_note"])
 
     write_results(filepath, route, inv)
 
