@@ -25,22 +25,32 @@ _cm = persistence.new_manager("relics")
 
 _LEG_OPTIONS_ALL = ["1/5", "2/5", "3/5", "4/5", "5/5"]
 
+def _to_star_leg(idx: int):
+    if idx <= 0:
+        return "0★", "1/5"
+    if idx > 75:
+        return f"B★{idx - 75}", "1/5"
+    off = idx - 1
+    return f"{'YRP'[off // 25]}★{off % 25 // 5 + 1}", f"{off % 25 % 5 + 1}/5"
+
 if "rel_initialized" not in st.session_state:
     _saved = persistence.load(_cm, "th_relics")
     if _saved:
         if "inv_v3" in _saved:
             for _r in ALL_RELICS:
                 _rd = _saved["inv_v3"].get(_r, {})
-                st.session_state[f"isidx_{_r}"] = int(_rd.get("star_idx", 0) or 0)
+                _s, _l = _to_star_leg(int(_rd.get("star_idx", 0) or 0))
+                st.session_state[f"istar_{_r}"] = _s
+                st.session_state[f"ileg_{_r}"]  = _l
                 st.session_state[f"ispec_{_r}"] = int(_rd.get("spec", 0) or 0)
                 st.session_state[f"iu_{_r}"]    = bool(_rd.get("use",  True))
         elif "inv_v2" in _saved:
             for _r in ALL_RELICS:
                 _rd = _saved["inv_v2"].get(_r, {})
-                _st = _rd.get("star", "0★") if _rd.get("star", "0★") in STAR_OPTIONS else "0★"
-                _lg = _rd.get("leg",  "1/5") if _rd.get("leg", "—") in _LEG_OPTIONS_ALL else "1/5"
-                from relic_optimizer import star_leg_to_idx as _stl
-                st.session_state[f"isidx_{_r}"] = _stl(_st, _lg)
+                _s = _rd.get("star", "0★") if _rd.get("star", "0★") in STAR_OPTIONS else "0★"
+                _l = _rd.get("leg",  "1/5") if _rd.get("leg", "—") in _LEG_OPTIONS_ALL else "1/5"
+                st.session_state[f"istar_{_r}"] = _s
+                st.session_state[f"ileg_{_r}"]  = _l
                 st.session_state[f"ispec_{_r}"] = int(_rd.get("spec", 0) or 0)
                 st.session_state[f"iu_{_r}"]    = bool(_rd.get("use",  True))
         elif "inv_table" in _saved:
@@ -53,18 +63,24 @@ if "rel_initialized" not in st.session_state:
                 if _leg == "—": _leg = "1/5"
                 _spec = _rd.get("Spec. shards") or _rd.get("Frag. específicos", 0)
                 _use  = _rd.get("Use?") if "Use?" in _rd else _rd.get("Usar?", True)
-                st.session_state[f"isidx_{_r}"] = _stl(_star if _star in STAR_OPTIONS else "0★", _leg)
+                _s, _l = _to_star_leg(_stl(_star if _star in STAR_OPTIONS else "0★", _leg))
+                st.session_state[f"istar_{_r}"] = _s
+                st.session_state[f"ileg_{_r}"]  = _l
                 st.session_state[f"ispec_{_r}"] = int(_spec) if _spec else 0
                 st.session_state[f"iu_{_r}"]    = bool(_use) if _use is not None else True
     st.session_state["rel_initialized"] = True
 
 
 def _inv_save_all():
-    _inv_v3 = {_r: {
-        "star_idx": int(st.session_state.get(f"isidx_{_r}", 0) or 0),
-        "spec":     int(st.session_state.get(f"ispec_{_r}", 0) or 0),
-        "use":      bool(st.session_state.get(f"iu_{_r}", True)),
-    } for _r in ALL_RELICS}
+    _inv_v3 = {}
+    for _r in ALL_RELICS:
+        _star = st.session_state.get(f"istar_{_r}", "0★") or "0★"
+        _leg  = st.session_state.get(f"ileg_{_r}",  "1/5") or "1/5"
+        _inv_v3[_r] = {
+            "star_idx": _relic_star_idx(_star, _leg),
+            "spec":     int(st.session_state.get(f"ispec_{_r}", 0) or 0),
+            "use":      bool(st.session_state.get(f"iu_{_r}", True)),
+        }
     st.session_state["inv_v3"] = _inv_v3
     persistence.save(_cm, "th_relics", {"inv_v3": _inv_v3})
 
@@ -141,21 +157,13 @@ def _star_img_for_idx(idx: int, base_dir: str):
     w    = max(1, int(img.width * h / img.height))
     return img.resize((w, h), _PIL.LANCZOS), w
 
-def _star_label(idx: int) -> str:
-    """Human-readable tier label for a star index 0-80."""
-    if idx == 0:
-        return t("0★ — sem relíquia", "0★ — no relic")
-    if idx > 75:
-        tier = t("Preto", "Black")
-        return f"B★{idx - 75} · {tier}"
-    off   = idx - 1
-    t_idx = off // 25          # 0=Y, 1=R, 2=P
-    w_t   = off % 25
-    star  = w_t // 5 + 1       # 1-5
-    leg   = w_t % 5 + 1        # 1-5
-    pfx   = ["Y", "R", "P"][t_idx]
-    name  = [t("Amarelo", "Yellow"), t("Vermelho", "Red"), t("Platinado", "Platinum")][t_idx]
-    return f"{pfx}★{star} ({leg}/5) · {name}"
+_STAR_TIER_OPTS = (
+    ["0★"] +
+    [f"Y★{n}" for n in range(1, 6)] +
+    [f"R★{n}" for n in range(1, 6)] +
+    [f"P★{n}" for n in range(1, 6)] +
+    [f"B★{n}" for n in range(1, 6)]
+)
 
 # ── Header ─────────────────────────────────────────────────────────────────────
 inject_global_css()
@@ -264,64 +272,87 @@ with tab_main:
         "Fill in your relic data. Universal relics with 0 specific shards are skipped as relays.",
     ))
 
-    _INV_GROUPS = [
-        (t("🔮 Universais", "🔮 Universals"), UNIVERSAL_RELICS),
-        (t("⚔️ Set: Liga",    "⚔️ Set: League"), SETS["League"]),
-        (t("🐉 Set: Horda",   "🐉 Set: Horde"),  SETS["Horde"]),
-        (t("🌿 Set: Natureza", "🌿 Set: Nature"), SETS["Nature"]),
-    ]
+    @st.fragment
+    def _inventory_section():
+        _INV_GROUPS = [
+            (t("🔮 Universais", "🔮 Universals"), UNIVERSAL_RELICS),
+            (t("⚔️ Set: Liga",    "⚔️ Set: League"), SETS["League"]),
+            (t("🐉 Set: Horda",   "🐉 Set: Horde"),  SETS["Horde"]),
+            (t("🌿 Set: Natureza", "🌿 Set: Nature"), SETS["Nature"]),
+        ]
+        _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
+        _star_names = [
+            ("Y", t("Amarelo", "Yellow")),
+            ("R", t("Vermelho", "Red")),
+            ("P", t("Platinado", "Platinum")),
+            ("B", t("Preto", "Black")),
+        ]
+        _star_fmt = {
+            "0★": t("— Sem relíquia", "— No relic"),
+            **{f"{pfx}★{n}": f"{name} ★{n}" for pfx, name in _star_names for n in range(1, 6)},
+        }
 
-    # column header row
-    _hc0, _hc1, _hc2, _hc3, _hc4 = st.columns([1, 3, 5, 1, 1])
-    _hc1.caption(t("Relíquia", "Relic"))
-    _hc2.caption(t("Nível de Estrela (arrastar)", "Star Level (drag)"))
-    _hc3.caption(t("Frags.", "Shards"))
-    _hc4.caption(t("Usar?", "Use?"))
+        _hc0, _hc1, _hc2, _hc3, _hc4 = st.columns([1, 3, 5, 1, 1])
+        _hc1.caption(t("Relíquia", "Relic"))
+        _hc2.caption(t("Nível", "Level"))
+        _hc3.caption(t("Frags.", "Shards"))
+        _hc4.caption(t("Usar?", "Use?"))
 
-    for _grp_name, _grp_relics in _INV_GROUPS:
-        st.markdown(f"**{_grp_name}**")
-        for _relic in _grp_relics:
-            _portrait = _load_portrait(_relic)
-            _c0, _c1, _c2, _c3, _c4 = st.columns([1, 3, 5, 1, 1])
-            with _c0:
-                if _portrait is not None:
-                    st.image(_portrait, width=44)
-                else:
-                    st.markdown("⚜️")
-            with _c1:
-                st.markdown(f"**{_rn(_relic)}**")
-                _rtype = t("Universal", "Universal") if _relic in UNIVERSAL_RELICS else t("Set", "Set")
-                st.caption(_rtype)
-            with _c2:
-                # Read current index BEFORE rendering slider (to show image for current value)
-                _cur_idx = int(st.session_state.get(f"isidx_{_relic}", 0) or 0)
-                _si_img, _si_w = _star_img_for_idx(_cur_idx, _BASE)
-                _cs, _cimg = st.columns([4, 3])
-                with _cs:
-                    st.slider(
-                        t("Nível", "Level"), 0, 80,
-                        key=f"isidx_{_relic}",
+        for _grp_name, _grp_relics in _INV_GROUPS:
+            st.markdown(f"**{_grp_name}**")
+            for _relic in _grp_relics:
+                _portrait = _load_portrait(_relic)
+                _c0, _c1, _c2, _c3, _c4 = st.columns([1, 3, 5, 1, 1])
+                with _c0:
+                    if _portrait is not None:
+                        st.image(_portrait, width=44)
+                    else:
+                        st.markdown("⚜️")
+                with _c1:
+                    st.markdown(f"**{_rn(_relic)}**")
+                    _rtype = t("Universal", "Universal") if _relic in UNIVERSAL_RELICS else t("Set", "Set")
+                    st.caption(_rtype)
+                with _c2:
+                    _cur_star = st.session_state.get(f"istar_{_relic}", "0★") or "0★"
+                    _cur_leg  = st.session_state.get(f"ileg_{_relic}",  "1/5") or "1/5"
+                    _cur_idx  = _relic_star_idx(_cur_star, _cur_leg)
+                    _si_img, _si_w = _star_img_for_idx(_cur_idx, _BASE)
+                    _cs, _cl = st.columns([5, 3])
+                    with _cs:
+                        st.selectbox(
+                            "Star", _STAR_TIER_OPTS,
+                            format_func=lambda x: _star_fmt.get(x, x),
+                            key=f"istar_{_relic}",
+                            on_change=_inv_save_all,
+                            label_visibility="collapsed",
+                        )
+                    with _cl:
+                        _leg_disabled = _cur_star == "0★" or _cur_star.startswith("B")
+                        st.selectbox(
+                            "Leg", _LEG_OPTS,
+                            key=f"ileg_{_relic}",
+                            on_change=_inv_save_all,
+                            label_visibility="collapsed",
+                            disabled=_leg_disabled,
+                        )
+                    st.image(_si_img, width=_si_w)
+                with _c3:
+                    st.number_input(
+                        t("Frags.", "Shards"), min_value=0,
+                        key=f"ispec_{_relic}",
                         on_change=_inv_save_all,
                         label_visibility="collapsed",
                     )
-                    st.caption(_star_label(_cur_idx))
-                with _cimg:
-                    st.image(_si_img, width=_si_w)
-            with _c3:
-                st.number_input(
-                    t("Frags.", "Shards"), min_value=0,
-                    key=f"ispec_{_relic}",
-                    on_change=_inv_save_all,
-                    label_visibility="collapsed",
-                )
-            with _c4:
-                st.checkbox(
-                    t("Usar?", "Use?"),
-                    key=f"iu_{_relic}",
-                    on_change=_inv_save_all,
-                    label_visibility="collapsed",
-                )
-        st.divider()
+                with _c4:
+                    st.checkbox(
+                        t("Usar?", "Use?"),
+                        key=f"iu_{_relic}",
+                        on_change=_inv_save_all,
+                        label_visibility="collapsed",
+                    )
+            st.divider()
+
+    _inventory_section()
 
     # ── Run ────────────────────────────────────────────────────────────────────────
     st.markdown("---")
@@ -329,11 +360,12 @@ with tab_main:
         # Build inv dict from per-relic session state
         relics_dict = {}
         for _rr in ALL_RELICS:
-            _sidx    = int(st.session_state.get(f"isidx_{_rr}", 0) or 0)
+            _star    = st.session_state.get(f"istar_{_rr}", "0★") or "0★"
+            _leg     = st.session_state.get(f"ileg_{_rr}",  "1/5") or "1/5"
             _spec_v  = int(st.session_state.get(f"ispec_{_rr}", 0) or 0)
             _can_use = bool(st.session_state.get(f"iu_{_rr}", True))
             relics_dict[_rr] = {
-                "star_idx":        _sidx,
+                "star_idx":        _relic_star_idx(_star, _leg),
                 "specific_shards": _spec_v,
                 "can_use":         _can_use,
             }
