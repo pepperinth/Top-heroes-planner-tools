@@ -19,10 +19,36 @@ from lord_gear_engine import (
 )
 from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR
 from ui_utils import inject_global_css, section_header, results_header, FACTION_COLORS
+import persistence
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
 st.set_page_config(page_title="Lord Gear", page_icon="⚙️", layout="wide")
+
+# ── Persistence ────────────────────────────────────────────────────────────────
+_cm = persistence.new_manager("lordgear")
+
+if "lg_initialized" not in st.session_state:
+    _saved = persistence.load(_cm, "th_lordgear")
+    if _saved:
+        st.session_state["calc_inv_rm"]  = int(_saved.get("inv_rm", 0))
+        st.session_state["calc_inv_mt"]  = int(_saved.get("inv_mt", 0))
+        st.session_state["calc_inv_ori"] = int(_saved.get("inv_ori", 0))
+        st.session_state["calc_inv_db"]  = int(_saved.get("inv_db", 0))
+        if "plan" in _saved:
+            st.session_state["lordgear_plan"] = _saved["plan"]
+    st.session_state["lg_initialized"] = True
+
+
+def _lg_save():
+    persistence.save(_cm, "th_lordgear", {
+        "inv_rm":  st.session_state.get("calc_inv_rm", 0),
+        "inv_mt":  st.session_state.get("calc_inv_mt", 0),
+        "inv_ori": st.session_state.get("calc_inv_ori", 0),
+        "inv_db":  st.session_state.get("calc_inv_db", 0),
+        "plan":    st.session_state.get("lordgear_plan", []),
+    })
+
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
@@ -36,6 +62,11 @@ with st.sidebar:
         horizontal=True, label_visibility="collapsed", key="lang_lordgear",
     )
     st.session_state.lang = "pt" if "Português" in lang_pick else "en"
+    st.caption("🍪 " + (
+        "Inventário e plano salvos no seu browser."
+        if st.session_state.lang == "pt" else
+        "Inventory and plan saved in your browser."
+    ))
     st.divider()
     st.page_link("app.py", label="← Home")
     st.divider()
@@ -215,19 +246,23 @@ with tab_calc:
     with ic1:
         show_resource_image("rm", _BASE, st)
         inv_rm = st.number_input(t("Metal Refinado", "Refined Metal"),
-                                 min_value=0, value=0, step=100, key="calc_inv_rm")
+                                 min_value=0, value=0, step=100, key="calc_inv_rm",
+                                 on_change=_lg_save)
     with ic2:
         show_resource_image("mt", _BASE, st)
         inv_mt = st.number_input(t("Fio Mágico", "Magic Thread"),
-                                 min_value=0, value=0, step=1, key="calc_inv_mt")
+                                 min_value=0, value=0, step=1, key="calc_inv_mt",
+                                 on_change=_lg_save)
     with ic3:
         show_resource_image("ori", _BASE, st)
         inv_ori = st.number_input("Oricalco / Orichalcum",
-                                  min_value=0, value=0, step=1, key="calc_inv_ori")
+                                  min_value=0, value=0, step=1, key="calc_inv_ori",
+                                  on_change=_lg_save)
     with ic4:
         show_resource_image("db", _BASE, st)
         inv_db = st.number_input(t("Sangue de Dragão", "Dragon Blood"),
-                                 min_value=0, value=0, step=1, key="calc_inv_db")
+                                 min_value=0, value=0, step=1, key="calc_inv_db",
+                                 on_change=_lg_save)
 
     # ── Validation ────────────────────────────────────────────────────────────
     st.markdown("---")
@@ -406,6 +441,7 @@ with tab_plan:
                     "ori":      r["ori"],
                     "db":       r["db"],
                 })
+                _lg_save()
                 st.rerun()
     else:
         show_codex_image(_BASE, st, height=22)
@@ -437,6 +473,7 @@ with tab_plan:
                     "ori":     r["ori"],
                     "db":      r["db"],
                 })
+                _lg_save()
                 st.rerun()
 
     # ── Plan table ────────────────────────────────────────────────────────────
@@ -476,6 +513,7 @@ with tab_plan:
             min_value=1, max_value=len(plan), value=1, step=1, key="plan_rem_idx")
         if st.button(t("🗑️ Remover", "🗑️ Remove"), key="plan_rem"):
             plan.pop(rem_idx - 1)
+            _lg_save()
             st.rerun()
 
         # ── Totals ────────────────────────────────────────────────────────────
@@ -536,6 +574,7 @@ with tab_plan:
             st.session_state["lordgear_plan"] = []
             st.session_state.pop("_src_lord_gear_Lord_Gear_Trial", None)
             st.session_state["_calc_sent_Lord_Gear_Trial"] = False
+            _lg_save()
             st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════

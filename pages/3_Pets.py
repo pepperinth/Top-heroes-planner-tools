@@ -15,6 +15,7 @@ from pet_engine import (
 from events_data import EVENTS, get_milestone_status
 from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR
 from ui_utils import inject_global_css, section_header, FACTION_COLORS, RARITY_COLORS
+import persistence
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
@@ -29,6 +30,34 @@ def _faction_icon(faction_en: str, width: int = 32):
 
 st.set_page_config(page_title="Pet Calculator", page_icon="🐾", layout="wide")
 
+# ── Persistence ────────────────────────────────────────────────────────────────
+_cm = persistence.new_manager("pets")
+
+if "pet_initialized" not in st.session_state:
+    _saved = persistence.load(_cm, "th_pets")
+    if _saved:
+        st.session_state["pet_food"]       = int(_saved.get("pet_food", 0))
+        st.session_state["pet_ess"]        = int(_saved.get("pet_ess", 0))
+        st.session_state["pet_box"]        = int(_saved.get("pet_box", 0))
+        st.session_state["inv_common_pet"] = int(_saved.get("inv_common_pet", 0))
+        if "pet_plan" in _saved:
+            st.session_state["pet_plan"] = _saved["pet_plan"]
+        if "pet_inv_table" in _saved:
+            st.session_state["pet_inv_table"] = _saved["pet_inv_table"]
+    st.session_state["pet_initialized"] = True
+
+
+def _pets_save():
+    persistence.save(_cm, "th_pets", {
+        "pet_food":       st.session_state.get("pet_food", 0),
+        "pet_ess":        st.session_state.get("pet_ess", 0),
+        "pet_box":        st.session_state.get("pet_box", 0),
+        "inv_common_pet": st.session_state.get("inv_common_pet", 0),
+        "pet_plan":       st.session_state.get("pet_plan", []),
+        "pet_inv_table":  st.session_state.get("pet_inv_table", {}),
+    })
+
+
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
     st.session_state.lang = "pt"
@@ -41,6 +70,11 @@ with st.sidebar:
         horizontal=True, label_visibility="collapsed", key="lang_pet",
     )
     st.session_state.lang = "pt" if "Português" in lang_pick else "en"
+    st.caption("🍪 " + (
+        "Inventário e plano salvos no seu browser."
+        if st.session_state.lang == "pt" else
+        "Inventory and plan saved in your browser."
+    ))
     st.divider()
     st.page_link("app.py", label="← Home")
     st.divider()
@@ -70,17 +104,21 @@ st.subheader("📦 " + t("Recursos", "Resources"))
 rc1, rc2, rc3, rc4 = st.columns(4)
 with rc1:
     inv_food = st.number_input(t("🍗 Pet Food", "🍗 Pet Food"),
-                                min_value=0, value=0, step=1000, key="pet_food")
+                                min_value=0, value=0, step=1000, key="pet_food",
+                                on_change=_pets_save)
 with rc2:
     inv_ess = st.number_input(t("💎 Pet Essence", "💎 Pet Essence"),
-                               min_value=0, value=0, step=100, key="pet_ess")
+                               min_value=0, value=0, step=100, key="pet_ess",
+                               on_change=_pets_save)
 with rc3:
     inv_box = st.number_input(t("🎁 Rare Pet Choice Box", "🎁 Rare Pet Choice Box"),
-                               min_value=0, value=0, step=1, key="pet_box")
+                               min_value=0, value=0, step=1, key="pet_box",
+                               on_change=_pets_save)
 with rc4:
     inv_common = st.number_input(
         t("🐾 Pets Comuns", "🐾 Common Pets"),
         min_value=0, value=0, step=1, key="inv_common_pet",
+        on_change=_pets_save,
         help=t(
             "Cópias de pets Comuns para usar como material de EXP.",
             "Common pet copies to use as EXP material.",
@@ -127,6 +165,7 @@ edited_inv = st.data_editor(
         _col_exc: st.column_config.CheckboxColumn(),
     },
     key="pet_inv_table",
+    on_change=_pets_save,
 )
 
 inv_copies  = {PETS[i][0]: int(edited_inv.iloc[i][_col_cop]) for i in range(len(PETS))}
@@ -382,6 +421,7 @@ with tab_plan:
                 "any":     ms["any"],
                 "essence": ms["essence"],
             })
+            _pets_save()
 
     plan = st.session_state["pet_plan"]
 
@@ -508,4 +548,5 @@ with tab_plan:
             st.session_state["_calc_sent_Pet_Ranking"]   = False
             for _k in range(5):
                 st.session_state.pop(f"_calc_contrib_Pet_Ranking_{_k}", None)
+            _pets_save()
             st.rerun()

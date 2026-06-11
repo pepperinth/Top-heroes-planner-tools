@@ -25,10 +25,27 @@ from hero_engine import (
 from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR, show_star_image
 from events_data import EVENTS, get_milestone_status
 from ui_utils import inject_global_css, section_header, results_header, FACTION_COLORS, TIER_COLORS, tier_badge
+import persistence
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
 st.set_page_config(page_title="Heróis", page_icon="👤", layout="wide")
+
+# ── Persistence ────────────────────────────────────────────────────────────────
+_cm = persistence.new_manager("heroes")
+
+if "heroes_initialized" not in st.session_state:
+    _saved = persistence.load(_cm, "th_heroes")
+    if _saved and "plan" in _saved:
+        st.session_state["hero_plan_v2"] = _saved["plan"]
+    st.session_state["heroes_initialized"] = True
+
+
+def _heroes_save():
+    persistence.save(_cm, "th_heroes", {
+        "plan": st.session_state.get("hero_plan_v2", {}),
+    })
+
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
@@ -42,6 +59,11 @@ with st.sidebar:
         horizontal=True, label_visibility="collapsed", key="lang_hero",
     )
     st.session_state.lang = "pt" if "Português" in lang_pick else "en"
+    st.caption("🍪 " + (
+        "Plano salvo no seu browser."
+        if st.session_state.lang == "pt" else
+        "Plan saved in your browser."
+    ))
     st.divider()
     st.page_link("app.py", label="← Home")
     st.divider()
@@ -475,6 +497,7 @@ with tab_calc:
                     "tgt_traits": list(tgt_traits),
                     "res":        dict(res),
                 })
+                _heroes_save()
                 st.success(t(f"✅ {sel_hero} adicionado a {_q_dest}!",
                              f"✅ {sel_hero} added to {_q_dest}!"))
 
@@ -573,6 +596,7 @@ with tab_plan:
             if _del_h != "—":
                 if st.button(f"🗑️ {t('Remover','Remove')} {_del_h}", key=f"q_del_btn_{qk}"):
                     plan[qk]["heroes"] = [e for e in hlist if e["name"] != _del_h]
+                    _heroes_save()
                     st.rerun()
 
         st.divider()
@@ -600,6 +624,7 @@ with tab_plan:
     if st.button("🗑️ " + t("Limpar todo o plano","Clear entire plan"), key="q_clear_all"):
         st.session_state["hero_plan_v2"] = {k: {"faction": "Liga", "heroes": []}
                                              for k in _Q_KEYS}
+        _heroes_save()
         st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════

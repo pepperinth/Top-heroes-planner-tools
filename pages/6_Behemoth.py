@@ -16,10 +16,36 @@ from behemoth_engine import (
     calc_level_resources, calc_star_resources, calc_total,
 )
 from ui_utils import inject_global_css, section_header, results_header, FACTION_COLORS
+import persistence
 
 _BASE = os.path.dirname(os.path.dirname(__file__))
 
 st.set_page_config(page_title="Behemoth", page_icon="🦕", layout="wide")
+
+# ── Persistence ────────────────────────────────────────────────────────────────
+_cm = persistence.new_manager("behemoth")
+
+if "beh_initialized" not in st.session_state:
+    _saved = persistence.load(_cm, "th_behemoth")
+    if _saved:
+        st.session_state["calc_inv_mag"]       = int(_saved.get("inv_mag", 0))
+        st.session_state["calc_inv_core"]      = int(_saved.get("inv_core", 0))
+        st.session_state["calc_inv_seal_spec"] = int(_saved.get("inv_seal_spec", 0))
+        st.session_state["calc_inv_seal_univ"] = int(_saved.get("inv_seal_univ", 0))
+        if "plan" in _saved:
+            st.session_state["behemoth_plan"] = _saved["plan"]
+    st.session_state["beh_initialized"] = True
+
+
+def _beh_save():
+    persistence.save(_cm, "th_behemoth", {
+        "inv_mag":       st.session_state.get("calc_inv_mag", 0),
+        "inv_core":      st.session_state.get("calc_inv_core", 0),
+        "inv_seal_spec": st.session_state.get("calc_inv_seal_spec", 0),
+        "inv_seal_univ": st.session_state.get("calc_inv_seal_univ", 0),
+        "plan":          st.session_state.get("behemoth_plan", []),
+    })
+
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
@@ -33,6 +59,11 @@ with st.sidebar:
         horizontal=True, label_visibility="collapsed", key="lang_behemoth",
     )
     st.session_state.lang = "pt" if "Português" in lang_pick else "en"
+    st.caption("🍪 " + (
+        "Inventário e plano salvos no seu browser."
+        if st.session_state.lang == "pt" else
+        "Inventory and plan saved in your browser."
+    ))
     st.divider()
     st.page_link("app.py", label="← Home")
     st.divider()
@@ -172,21 +203,25 @@ with tab_calc:
         inv_mag = st.number_input(
             f"🔮 Magicite ({faction_name})",
             min_value=0, value=0, step=100, key="calc_inv_mag",
+            on_change=_beh_save,
         )
     with ic2:
         inv_core = st.number_input(
             t("💠 Núcleos Mágicos", "💠 Magic Cores"),
             min_value=0, value=0, step=1, key="calc_inv_core",
+            on_change=_beh_save,
         )
     with ic3:
         inv_seal_spec = st.number_input(
             f"🔑 {t('Selo de', 'Seal of')} {beh['name']}",
             min_value=0, value=0, step=1, key="calc_inv_seal_spec",
+            on_change=_beh_save,
         )
     with ic4:
         inv_seal_univ = st.number_input(
             t("🔑 Selos Universais", "🔑 Universal Seals"),
             min_value=0, value=0, step=1, key="calc_inv_seal_univ",
+            on_change=_beh_save,
         )
 
     # ── Validation & results ──────────────────────────────────────────────────
@@ -370,6 +405,7 @@ with tab_plan:
                 "cores":    r["magic_cores"],
                 "seals":    r["seals"],
             })
+            _beh_save()
             st.rerun()
 
     # ── Plan table ────────────────────────────────────────────────────────────
@@ -401,6 +437,7 @@ with tab_plan:
             min_value=1, max_value=len(plan), value=1, step=1, key="plan_rem_idx")
         if st.button(t("🗑️ Remover","🗑️ Remove"), key="plan_rem"):
             plan.pop(rem_idx - 1)
+            _beh_save()
             st.rerun()
 
         # ── Totals ────────────────────────────────────────────────────────────
@@ -539,6 +576,7 @@ with tab_plan:
             st.session_state.pop("_src_behemoth_Hero_Development", None)
             st.session_state["_calc_sent_Relic_Race"]       = False
             st.session_state["_calc_sent_Hero_Development"] = False
+            _beh_save()
             st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════

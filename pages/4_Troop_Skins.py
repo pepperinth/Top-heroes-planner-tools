@@ -9,8 +9,11 @@ import streamlit as st
 import pandas as pd
 from events_data import EVENTS, get_milestone_status
 from ui_utils import inject_global_css, section_header, RARITY_COLORS
+import persistence
 
 st.set_page_config(page_title="Troop Skin Calculator", page_icon="🧢", layout="wide")
+
+_cm = persistence.new_manager("skins")
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
@@ -24,6 +27,11 @@ with st.sidebar:
         horizontal=True, label_visibility="collapsed", key="lang_skin",
     )
     st.session_state.lang = "pt" if "Português" in lang_pick else "en"
+    st.caption("🍪 " + (
+        "Inventário e plano salvos no seu browser."
+        if st.session_state.lang == "pt" else
+        "Inventory and plan saved in your browser."
+    ))
     st.divider()
     st.page_link("app.py", label="← Home")
     st.divider()
@@ -48,6 +56,36 @@ SKINS = {
     ],
     "Rare": ["Shield Soldier", "Cavalry"],
 }
+
+# ── Persistence (init + save — placed after SKINS so we can iterate it) ────────
+if "skins_initialized" not in st.session_state:
+    _saved = persistence.load(_cm, "th_skins")
+    if _saved:
+        st.session_state["medal_stock"] = int(_saved.get("medal_stock", 0))
+        for _rar in ["Legendary", "Epic", "Rare"]:
+            st.session_state[f"tok_{_rar}"] = int(_saved.get(f"tok_{_rar}", 0))
+        for _rar, _skins_list in SKINS.items():
+            for _sn in _skins_list:
+                if f"copy_{_sn}" in _saved:
+                    st.session_state[f"copy_{_sn}"] = int(_saved[f"copy_{_sn}"])
+        if "skin_plan" in _saved:
+            st.session_state["skin_plan"] = _saved["skin_plan"]
+    st.session_state["skins_initialized"] = True
+
+
+def _skins_save():
+    _data = {
+        "medal_stock":   st.session_state.get("medal_stock", 0),
+        "tok_Legendary": st.session_state.get("tok_Legendary", 0),
+        "tok_Epic":      st.session_state.get("tok_Epic", 0),
+        "tok_Rare":      st.session_state.get("tok_Rare", 0),
+        "skin_plan":     st.session_state.get("skin_plan", []),
+    }
+    for _rar, _skins_list in SKINS.items():
+        for _sn in _skins_list:
+            _data[f"copy_{_sn}"] = st.session_state.get(f"copy_{_sn}", 0)
+    persistence.save(_cm, "th_skins", _data)
+
 
 LEG_CUM = {
     1: 0, 2: 1600, 3: 3900, 4: 7100, 5: 11500, 6: 17700, 7: 26400,
@@ -121,6 +159,7 @@ with inv1:
     medal_stock = st.number_input(
         t("🏅 Medalhas", "🏅 Medals"),
         min_value=0, value=0, step=10_000, format="%d", key="medal_stock",
+        on_change=_skins_save,
     )
 token_stock = {}
 for col, (rar, emoji) in zip([inv2, inv3, inv4],
@@ -129,6 +168,7 @@ for col, (rar, emoji) in zip([inv2, inv3, inv4],
         token_stock[rar] = st.number_input(
             f"{emoji} {t('Tokens', 'Tokens')} — {t(RAR_PT[rar], rar)}",
             min_value=0, value=0, step=1, format="%d", key=f"tok_{rar}",
+            on_change=_skins_save,
         )
 
 st.caption(t(
@@ -147,6 +187,7 @@ with st.expander(t("📋 Cópias por Skin (opcional)", "📋 Skin-Specific Copie
                 skin_copies[skin_name] = st.number_input(
                     skin_name, min_value=0, value=0, step=1,
                     key=f"copy_{skin_name}", format="%d",
+                    on_change=_skins_save,
                 )
         st.divider()
 
@@ -406,6 +447,7 @@ with tab_plan:
                 "medals":  sp_med_lv + sp_med_hl,
                 "tokens":  sp_tokens,
             })
+            _skins_save()
 
     plan = st.session_state["skin_plan"]
 
@@ -518,4 +560,5 @@ with tab_plan:
             st.session_state["_calc_sent_Lord_Gear_Trial"] = False
             for _k in [4, 5, 6, 7]:
                 st.session_state.pop(f"_calc_contrib_Lord_Gear_Trial_{_k}", None)
+            _skins_save()
             st.rerun()

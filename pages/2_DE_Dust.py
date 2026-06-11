@@ -36,8 +36,27 @@ from de_dust_engine import (
     research_max_levels, research_cost,
 )
 from ui_utils import inject_global_css
+import persistence
 
 st.set_page_config(page_title="DE & Dust Planner", page_icon="🏗️", layout="wide")
+
+# ── Persistence ────────────────────────────────────────────────────────────────
+_cm = persistence.new_manager("dedust")
+
+if "de_initialized" not in st.session_state:
+    _saved = persistence.load(_cm, "th_dedust")
+    if _saved:
+        st.session_state["de_avail"]   = int(_saved.get("de_avail", 0))
+        st.session_state["dust_avail"] = int(_saved.get("dust_avail", 0))
+    st.session_state["de_initialized"] = True
+
+
+def _dedust_save():
+    persistence.save(_cm, "th_dedust", {
+        "de_avail":   st.session_state.get("de_avail", 0),
+        "dust_avail": st.session_state.get("dust_avail", 0),
+    })
+
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
@@ -51,6 +70,11 @@ with st.sidebar:
         horizontal=True, label_visibility="collapsed", key="lang_de",
     )
     st.session_state.lang = "pt" if "Português" in lang_pick else "en"
+    st.caption("🍪 " + (
+        "Inventário salvo no seu browser."
+        if st.session_state.lang == "pt" else
+        "Inventory saved in your browser."
+    ))
     st.divider()
     st.page_link("app.py", label="← Home")
 
@@ -203,12 +227,14 @@ with st.expander(t("📦 Inventário de Recursos", "📦 Resource Inventory"), e
         de_avail = st.number_input(
             t("Essência de Dragão disponível", "Dragon Essence available"),
             min_value=0, value=0, step=500, format="%d", key="de_avail",
+            on_change=_dedust_save,
         )
     with c2:
         _show_dust()
         dust_avail = st.number_input(
             t("Pó de Dragão disponível", "Dragon Dust available"),
             min_value=0, value=0, step=500, format="%d", key="dust_avail",
+            on_change=_dedust_save,
         )
     with c3:
         de_convert = st.number_input(

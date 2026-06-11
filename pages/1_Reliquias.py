@@ -16,8 +16,25 @@ from relic_optimizer import (
 )
 from events_data import EVENTS, get_milestone_status
 from ui_utils import inject_global_css, section_header, results_header
+import persistence
 
 st.set_page_config(page_title="Relic Optimizer", page_icon="⚜️", layout="wide")
+
+# ── Persistence ────────────────────────────────────────────────────────────────
+_cm = persistence.new_manager("relics")
+
+if "rel_initialized" not in st.session_state:
+    _saved = persistence.load(_cm, "th_relics")
+    if _saved and "inv_table" in _saved:
+        st.session_state["inv_table"] = _saved["inv_table"]
+    st.session_state["rel_initialized"] = True
+
+
+def _relics_save():
+    persistence.save(_cm, "th_relics", {
+        "inv_table": st.session_state.get("inv_table", {}),
+    })
+
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
@@ -31,6 +48,11 @@ with st.sidebar:
         horizontal=True, label_visibility="collapsed", key="lang_rel",
     )
     st.session_state.lang = "pt" if "Português" in lang_pick else "en"
+    st.caption("🍪 " + (
+        "Inventário salvo no seu browser."
+        if st.session_state.lang == "pt" else
+        "Inventory saved in your browser."
+    ))
     st.divider()
     st.page_link("app.py", label="← Home")
 
@@ -187,6 +209,7 @@ edited = st.data_editor(
         t("Usar?", "Use?"):   st.column_config.CheckboxColumn(),
     },
     key="inv_table",
+    on_change=_relics_save,
 )
 
 # ── Run ────────────────────────────────────────────────────────────────────────
