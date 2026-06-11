@@ -168,8 +168,8 @@ _STAR_TIER_OPTS = (
 # ── Header ─────────────────────────────────────────────────────────────────────
 inject_global_css()
 st.title("⚜️ " + t("Otimizador de Relíquias", "Relic Optimizer"))
-st.caption(t("Calcula a rota de Martelo Milagroso para maximizar os níveis das relíquias.",
-             "Calculates the Miracle Hammer route to maximise relic levels."))
+st.caption(t("Calcula a rota ótima usando Martelos Milagrosos para trocar níveis de estrela entre relíquias.",
+             "Calculates the optimal route using Miracle Hammers to swap star levels between relics."))
 
 LEG_OPTIONS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
 
@@ -588,7 +588,7 @@ Na tabela, indique para cada relíquia:
 
 **2. Configure os parâmetros (⚙️ Configuração)**
 - **Modo**: *Set completo* — otimiza todas as relíquias de um conjunto; *Relíquia única* — custo para uma relíquia
-- **Martelos Milagrosos**: quantidade disponível (cada martelo desenvolve uma relíquia 1 nível)
+- **Martelos Milagrosos**: quantidade disponível (cada martelo troca o nível de estrela entre duas relíquias)
 - **Fragmentos universais**: estoque de fragmentos que podem ser usados em qualquer relíquia
 - **Relay 1 / Relay 2**: relíquias universais obrigatórias que servem de "ponte" para redistribuir fragmentos entre as relíquias do set
 
@@ -612,7 +612,7 @@ For each relic in the table, set:
 
 **2. Set parameters (⚙️ Configuration)**
 - **Mode**: *Full set* — optimises all relics in a set; *Single relic* — cost for one relic
-- **Miracle Hammers**: quantity available (each hammer advances a relic 1 level)
+- **Miracle Hammers**: quantity available (each hammer swaps the star level between two relics)
 - **Universal shards**: shards that can be used on any relic
 - **Relay 1 / Relay 2**: mandatory universal relics acting as "bridges" to redistribute shards
 
