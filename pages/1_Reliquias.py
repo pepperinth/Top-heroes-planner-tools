@@ -300,26 +300,26 @@ with tab_main:
         ]
         _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
 
-        _hc0, _hc1, _hc2, _hc3, _hc4 = st.columns([1, 3, 5, 1, 1])
+        _hc1, _hc2 = st.columns([4, 7])
         _hc1.caption(t("Relíquia", "Relic"))
-        _hc2.caption(t("Nível", "Level"))
-        _hc3.caption(t("Frags.", "Shards"))
-        _hc4.caption(t("Usar?", "Use?"))
+        _hc2.caption(t("Nível  ·  Frags. específicos  ·  Usar?", "Level  ·  Spec. shards  ·  Use?"))
 
         for _grp_name, _grp_relics in _INV_GROUPS:
             st.markdown(f"**{_grp_name}**")
             for _relic in _grp_relics:
                 _portrait = _load_portrait(_relic)
-                _c0, _c1, _c2, _c3, _c4 = st.columns([1, 3, 5, 1, 1])
-                with _c0:
-                    if _portrait is not None:
-                        st.image(_portrait, width=44)
-                    else:
-                        st.markdown("⚜️")
+                _c1, _c2 = st.columns([4, 7])
                 with _c1:
-                    st.markdown(f"**{_rn(_relic)}**")
-                    _rtype = t("Universal", "Universal") if _relic in UNIVERSAL_RELICS else t("Set", "Set")
-                    st.caption(_rtype)
+                    _cp, _cn = st.columns([1, 3])
+                    with _cp:
+                        if _portrait is not None:
+                            st.image(_portrait, width=44)
+                        else:
+                            st.markdown("⚜️")
+                    with _cn:
+                        st.markdown(f"**{_rn(_relic)}**")
+                        _rtype = t("Universal", "Universal") if _relic in UNIVERSAL_RELICS else t("Set", "Set")
+                        st.caption(_rtype)
                 with _c2:
                     _cur_star = st.session_state.get(f"istar_{_relic}", "0★") or "0★"
                     _cur_leg  = st.session_state.get(f"ileg_{_relic}",  "1/5") or "1/5"
@@ -343,21 +343,21 @@ with tab_main:
                             label_visibility="collapsed",
                             disabled=_leg_disabled,
                         )
-                    st.image(_si_img, width=_si_w)
-                with _c3:
-                    st.number_input(
-                        t("Frags.", "Shards"), min_value=0,
-                        key=f"ispec_{_relic}",
-                        on_change=_inv_save_all,
-                        label_visibility="collapsed",
-                    )
-                with _c4:
-                    st.checkbox(
-                        t("Usar?", "Use?"),
-                        key=f"iu_{_relic}",
-                        on_change=_inv_save_all,
-                        label_visibility="collapsed",
-                    )
+                    _ci, _cf, _cu = st.columns([2, 4, 2])
+                    with _ci:
+                        st.image(_si_img, width=_si_w)
+                    with _cf:
+                        st.number_input(
+                            t("Frags. específicos", "Spec. shards"), min_value=0,
+                            key=f"ispec_{_relic}",
+                            on_change=_inv_save_all,
+                        )
+                    with _cu:
+                        st.checkbox(
+                            t("Usar?", "Use?"),
+                            key=f"iu_{_relic}",
+                            on_change=_inv_save_all,
+                        )
             st.divider()
 
     _inventory_section()
