@@ -28,12 +28,12 @@ RARITY_COLORS = {
 
 _GLOBAL_CSS = """
 <style>
-/* ── Metric cards ─────────────────────────────────────────── */
+/* ── Metric cards (theme-neutral via rgba) ────────────────── */
 [data-testid="stMetric"] {
-    background: #f7f8fa;
+    background: rgba(128,128,128,0.08);
     border-radius: 10px;
     padding: 12px 16px !important;
-    border: 1px solid #e4e6ea;
+    border: 1px solid rgba(128,128,128,0.18);
 }
 [data-testid="stMetricValue"] {
     font-size: 1.3em !important;
@@ -42,7 +42,7 @@ _GLOBAL_CSS = """
 
 /* ── Expander ─────────────────────────────────────────────── */
 [data-testid="stExpander"] {
-    border: 1px solid #e4e6ea;
+    border: 1px solid rgba(128,128,128,0.22);
     border-radius: 10px;
     overflow: hidden;
 }
@@ -55,7 +55,7 @@ _GLOBAL_CSS = """
 [data-testid="stDataFrame"] {
     border-radius: 10px;
     overflow: hidden;
-    border: 1px solid #e4e6ea;
+    border: 1px solid rgba(128,128,128,0.22);
 }
 
 /* ── Buttons ──────────────────────────────────────────────── */
@@ -103,12 +103,12 @@ _GLOBAL_CSS = """
 
 /* ── Milestone pills ──────────────────────────────────────── */
 .ms-reached {
-    background: #217346; color: white;
+    background: rgba(33,115,70,0.30); color: #4ecb84;
     border-radius: 6px; padding: 2px 10px;
     font-weight: bold; font-size: 0.85em;
 }
 .ms-pending {
-    background: #f0f0f0; color: #cc0000;
+    background: rgba(180,0,0,0.15); color: #ff5555;
     border-radius: 6px; padding: 2px 10px;
     font-size: 0.85em;
 }

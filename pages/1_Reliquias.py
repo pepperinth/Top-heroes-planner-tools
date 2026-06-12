@@ -82,7 +82,6 @@ if "rel_epic_initialized" not in st.session_state:
             st.session_state[f"estar_{_r}"] = _s if _s in STAR_OPTIONS else "0★"
             st.session_state[f"eleg_{_r}"]  = _l if _l in _LEG_OPTIONS_ALL else "1/5"
             st.session_state[f"espec_{_r}"] = int(_rd.get("spec", 0) or 0)
-            st.session_state[f"eu_{_r}"]    = bool(_rd.get("use", True))
     st.session_state["rel_epic_initialized"] = True
 
 if "rel_rare_initialized" not in st.session_state:
@@ -96,7 +95,6 @@ if "rel_rare_initialized" not in st.session_state:
             st.session_state[f"rstar_{_r}"] = _s if _s in STAR_OPTIONS_RARE else "0★"
             st.session_state[f"rleg_{_r}"]  = _l if _l in _LEG_OPTIONS_ALL else "1/5"
             st.session_state[f"rspec_{_r}"] = int(_rd.get("spec", 0) or 0)
-            st.session_state[f"ru_{_r}"]    = bool(_rd.get("use", True))
     st.session_state["rel_rare_initialized"] = True
 
 
@@ -122,7 +120,6 @@ def _epic_save_all():
         _inv[_r] = {
             "star_idx": star_leg_to_idx(_s, _l),
             "spec":     int(st.session_state.get(f"espec_{_r}", 0) or 0),
-            "use":      bool(st.session_state.get(f"eu_{_r}", True)),
         }
     persistence.save(_cm, "th_epics", {"inv_epic_v1": _inv})
 
@@ -135,7 +132,6 @@ def _rare_save_all():
         _inv[_r] = {
             "star_idx": star_leg_to_idx(_s, _l),
             "spec":     int(st.session_state.get(f"rspec_{_r}", 0) or 0),
-            "use":      bool(st.session_state.get(f"ru_{_r}", True)),
         }
     persistence.save(_cm, "th_rares", {"inv_rare_v1": _inv})
 
@@ -652,7 +648,7 @@ with tab_epic:
         _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
         _hc1, _hc2 = st.columns([4, 7])
         _hc1.caption(t("Relíquia", "Relic"))
-        _hc2.caption(t("Nível  ·  Frags. específicos  ·  Usar?", "Level  ·  Spec. shards  ·  Use?"))
+        _hc2.caption(t("Nível  ·  Frags. específicos", "Level  ·  Spec. shards"))
 
         for _relic in EPIC_RELICS:
             _portrait = _load_portrait(_relic)
@@ -690,19 +686,13 @@ with tab_epic:
                         label_visibility="collapsed",
                         disabled=_leg_disabled,
                     )
-                _ci, _cf, _cu = st.columns([2, 4, 2])
+                _ci, _cf = st.columns([2, 6])
                 with _ci:
                     st.image(_si_img, width=_si_w)
                 with _cf:
                     st.number_input(
                         t("Frags. específicos", "Spec. shards"), min_value=0,
                         key=f"espec_{_relic}",
-                        on_change=_epic_save_all,
-                    )
-                with _cu:
-                    st.checkbox(
-                        t("Usar?", "Use?"),
-                        key=f"eu_{_relic}",
                         on_change=_epic_save_all,
                     )
         st.divider()
@@ -741,6 +731,78 @@ with tab_epic:
         st.metric(t("Esp. usados / disponíveis", "Spec. used / available"), f"{_ec_sp_used:,} / {_ec_spec:,}")
         st.metric(t("Universais necessários", "Universal shards needed"), f"{_ec_univ:,}")
 
+    st.markdown("---")
+    st.subheader(t("📊 Projeção de Evento — Épicas", "📊 Event Projection — Epic"))
+    st.caption(t(
+        "Selecione a estrela alvo para cada relíquia. Fragmentos épicos valem ×25 pts na Corrida de Relíquias.",
+        "Set a target star for each relic. Epic shards are worth ×25 pts in the Relic Race event.",
+    ))
+
+    @st.fragment
+    def _epic_batch_section():
+        _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
+        _total = 0
+        _hc1, _hc2 = st.columns([4, 7])
+        _hc1.caption(t("Relíquia / Nível atual", "Relic / Current level"))
+        _hc2.caption(t("Estrela alvo  ·  Perna  ·  Frags. a gastar", "Target star  ·  Leg  ·  Shards to spend"))
+
+        for _relic in EPIC_RELICS:
+            _cur_s = st.session_state.get(f"estar_{_relic}", "0★") or "0★"
+            _cur_l = st.session_state.get(f"eleg_{_relic}", "1/5") or "1/5"
+            _cur   = star_leg_to_idx(_cur_s, _cur_l)
+            _spec  = int(st.session_state.get(f"espec_{_relic}", 0) or 0)
+
+            _c1, _c2 = st.columns([4, 7])
+            with _c1:
+                _portrait = _load_portrait(_relic)
+                _cp, _cn  = st.columns([1, 3])
+                with _cp:
+                    if _portrait: st.image(_portrait, width=44)
+                    else: st.markdown("🔮")
+                with _cn:
+                    st.markdown(f"**{_rn(_relic)}**")
+                    _cur_lbl = _star_fmt.get(_cur_s, _cur_s) + (" " + _cur_l if _cur_s != "0★" else "")
+                    st.caption(_cur_lbl)
+            with _c2:
+                _bs, _bl = st.columns([5, 3])
+                with _bs:
+                    _tgt_s = st.selectbox(
+                        "★", _STAR_TIER_OPTS[1:],
+                        format_func=lambda x: _star_fmt.get(x, x),
+                        key=f"ebatch_star_{_relic}",
+                        label_visibility="collapsed",
+                    )
+                with _bl:
+                    _tgt_l = st.selectbox(
+                        "/5", _LEG_OPTS,
+                        key=f"ebatch_leg_{_relic}",
+                        label_visibility="collapsed",
+                    )
+                _tgt    = star_leg_to_idx(_tgt_s, _tgt_l)
+                _need   = epic_shards_needed(_cur, _tgt)
+                _sp_u   = min(_spec, _need)
+                _univ_u = max(0, _need - _sp_u)
+                _total += _need
+                if _need > 0:
+                    st.caption(f"**{_need:,}** ({_sp_u} esp. + {_univ_u} univ.)")
+                else:
+                    st.caption("—")
+
+        st.divider()
+        _pts = _total * 25
+        _mc1, _mc2 = st.columns(2)
+        _mc1.metric(t("Total frags. épicos", "Total epic shards"), f"{_total:,}")
+        _mc2.metric(t("Pontos no evento (×25)", "Event pts (×25)"), f"{_pts:,}")
+        _ev = next(e for e in EVENTS if e["sheet"] == "Relic_Race")
+        _ev_name = _ev.get("name_pt", _ev["name"]) if lang == "pt" else _ev["name"]
+        _ms_str = "  ".join(
+            f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+            for s in get_milestone_status(_ev["milestones"], _pts)
+        )
+        st.caption(f"**{_ev_name}** — {_ms_str}")
+
+    _epic_batch_section()
+
 with tab_rare:
     st.caption(t(
         "Acompanhe o nível de suas relíquias Raras e calcule o custo de upgrades.",
@@ -752,7 +814,7 @@ with tab_rare:
         _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
         _hc1, _hc2 = st.columns([4, 7])
         _hc1.caption(t("Relíquia", "Relic"))
-        _hc2.caption(t("Nível  ·  Frags. específicos  ·  Usar?", "Level  ·  Spec. shards  ·  Use?"))
+        _hc2.caption(t("Nível  ·  Frags. específicos", "Level  ·  Spec. shards"))
 
         for _relic in RARE_RELICS:
             _portrait = _load_portrait(_relic)
@@ -790,19 +852,13 @@ with tab_rare:
                         label_visibility="collapsed",
                         disabled=_leg_disabled,
                     )
-                _ci, _cf, _cu = st.columns([2, 4, 2])
+                _ci, _cf = st.columns([2, 6])
                 with _ci:
                     st.image(_si_img, width=_si_w)
                 with _cf:
                     st.number_input(
                         t("Frags. específicos", "Spec. shards"), min_value=0,
                         key=f"rspec_{_relic}",
-                        on_change=_rare_save_all,
-                    )
-                with _cu:
-                    st.checkbox(
-                        t("Usar?", "Use?"),
-                        key=f"ru_{_relic}",
                         on_change=_rare_save_all,
                     )
         st.divider()
@@ -840,6 +896,78 @@ with tab_rare:
         st.metric(t("Frags. necessários", "Shards needed"), f"{_rc_needed:,}")
         st.metric(t("Esp. usados / disponíveis", "Spec. used / available"), f"{_rc_sp_used:,} / {_rc_spec:,}")
         st.metric(t("Universais necessários", "Universal shards needed"), f"{_rc_univ:,}")
+
+    st.markdown("---")
+    st.subheader(t("📊 Projeção de Evento — Raras", "📊 Event Projection — Rare"))
+    st.caption(t(
+        "Selecione a estrela alvo para cada relíquia. Fragmentos raros valem ×5 pts na Corrida de Relíquias.",
+        "Set a target star for each relic. Rare shards are worth ×5 pts in the Relic Race event.",
+    ))
+
+    @st.fragment
+    def _rare_batch_section():
+        _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
+        _total = 0
+        _hc1, _hc2 = st.columns([4, 7])
+        _hc1.caption(t("Relíquia / Nível atual", "Relic / Current level"))
+        _hc2.caption(t("Estrela alvo  ·  Perna  ·  Frags. a gastar", "Target star  ·  Leg  ·  Shards to spend"))
+
+        for _relic in RARE_RELICS:
+            _cur_s = st.session_state.get(f"rstar_{_relic}", "0★") or "0★"
+            _cur_l = st.session_state.get(f"rleg_{_relic}", "1/5") or "1/5"
+            _cur   = star_leg_to_idx(_cur_s, _cur_l)
+            _spec  = int(st.session_state.get(f"rspec_{_relic}", 0) or 0)
+
+            _c1, _c2 = st.columns([4, 7])
+            with _c1:
+                _portrait = _load_portrait(_relic)
+                _cp, _cn  = st.columns([1, 3])
+                with _cp:
+                    if _portrait: st.image(_portrait, width=44)
+                    else: st.markdown("💎")
+                with _cn:
+                    st.markdown(f"**{_rn(_relic)}**")
+                    _cur_lbl = _star_fmt.get(_cur_s, _cur_s) + (" " + _cur_l if _cur_s != "0★" else "")
+                    st.caption(_cur_lbl)
+            with _c2:
+                _bs, _bl = st.columns([5, 3])
+                with _bs:
+                    _tgt_s = st.selectbox(
+                        "★", _STAR_TIER_OPTS_RARE[1:],
+                        format_func=lambda x: _star_fmt.get(x, x),
+                        key=f"rbatch_star_{_relic}",
+                        label_visibility="collapsed",
+                    )
+                with _bl:
+                    _tgt_l = st.selectbox(
+                        "/5", _LEG_OPTS,
+                        key=f"rbatch_leg_{_relic}",
+                        label_visibility="collapsed",
+                    )
+                _tgt    = star_leg_to_idx(_tgt_s, _tgt_l)
+                _need   = rare_shards_needed(_cur, _tgt)
+                _sp_u   = min(_spec, _need)
+                _univ_u = max(0, _need - _sp_u)
+                _total += _need
+                if _need > 0:
+                    st.caption(f"**{_need:,}** ({_sp_u} esp. + {_univ_u} univ.)")
+                else:
+                    st.caption("—")
+
+        st.divider()
+        _pts = _total * 5
+        _mc1, _mc2 = st.columns(2)
+        _mc1.metric(t("Total frags. raros", "Total rare shards"), f"{_total:,}")
+        _mc2.metric(t("Pontos no evento (×5)", "Event pts (×5)"), f"{_pts:,}")
+        _ev = next(e for e in EVENTS if e["sheet"] == "Relic_Race")
+        _ev_name = _ev.get("name_pt", _ev["name"]) if lang == "pt" else _ev["name"]
+        _ms_str = "  ".join(
+            f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+            for s in get_milestone_status(_ev["milestones"], _pts)
+        )
+        st.caption(f"**{_ev_name}** — {_ms_str}")
+
+    _rare_batch_section()
 
 with tab_help:
     _hi1, _hi2 = st.tabs([
