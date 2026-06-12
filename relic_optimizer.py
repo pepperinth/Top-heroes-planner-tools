@@ -88,6 +88,49 @@ def max_level_reachable(current: int, shards: int) -> int:
     return best
 
 
+# ── Epic / Rare star level data ───────────────────────────────────────────────
+_EPIC_PER_LEG = (
+    [2]*5 + [4]*5 + [4]*5 + [8]*5 + [8]*5 +        # Yellow:  130
+    [12]*5 + [14]*5 + [16]*5 + [18]*5 + [20]*5 +   # Red:     400
+    [30]*5 + [40]*5 + [50]*5 + [60]*5 + [80]*5 +   # Plat:   1300
+    [30]*5 + [40]*5 + [50]*5 + [60]*5 + [80]*5     # Black:  1300  → total 3130
+)
+CUMUL_EPIC = [0]
+for _c in _EPIC_PER_LEG:
+    CUMUL_EPIC.append(CUMUL_EPIC[-1] + _c)
+
+_RARE_PER_LEG = (
+    [2]*5 + [4]*5 + [6]*5 + [8]*5 + [10]*5 +        # Yellow:   150
+    [12]*5 + [14]*5 + [16]*5 + [20]*5 + [30]*5 +    # Red:      460
+    [40]*5 + [50]*5 + [60]*5 + [100]*5 + [120]*5 +  # Plat:    1850
+    [70]*5 + [80]*5 + [90]*5                          # Black B★1-3: 1200  → total 3660
+)
+CUMUL_RARE = [0]
+for _c in _RARE_PER_LEG:
+    CUMUL_RARE.append(CUMUL_RARE[-1] + _c)
+RARE_MAX_LEVEL = 90
+
+STAR_OPTIONS_RARE = (
+    ["0★"] +
+    [f"Y★{n}" for n in range(1, 6)] +
+    [f"R★{n}" for n in range(1, 6)] +
+    [f"P★{n}" for n in range(1, 6)] +
+    ["B★1", "B★2", "B★3"]
+)
+
+
+def epic_shards_needed(from_idx: int, to_idx: int) -> int:
+    if to_idx <= from_idx:
+        return 0
+    return CUMUL_EPIC[min(to_idx, 100)] - CUMUL_EPIC[min(from_idx, 100)]
+
+
+def rare_shards_needed(from_idx: int, to_idx: int) -> int:
+    if to_idx <= from_idx:
+        return 0
+    return CUMUL_RARE[min(to_idx, RARE_MAX_LEVEL)] - CUMUL_RARE[min(from_idx, RARE_MAX_LEVEL)]
+
+
 # ── Relic definitions ──────────────────────────────────────────────────────────
 UNIVERSAL_RELICS = [
     "Duke's Signet Ring", "Eternal Wings", "Frost Diadem", "Royalty",

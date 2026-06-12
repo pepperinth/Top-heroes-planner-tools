@@ -11,14 +11,15 @@ from behemoth_engine import STAR_IMAGES, show_star_image
 from relic_optimizer import (
     ALL_RELICS, UNIVERSAL_RELICS, ALL_SET_RELICS, SETS,
     STAR_OPTIONS, PREFERRED_INTER, RELIC_NAME_PT, RELIC_IMAGES,
+    EPIC_RELICS, RARE_RELICS, STAR_OPTIONS_RARE, RARE_MAX_LEVEL,
     star_leg_to_idx, idx_to_star_leg,
-    compute_route, shards_needed,
+    compute_route, shards_needed, epic_shards_needed, rare_shards_needed,
 )
 from events_data import EVENTS, get_milestone_status
 from ui_utils import inject_global_css, section_header, results_header
 import persistence
 
-st.set_page_config(page_title="Relic Optimizer", page_icon="⚜️", layout="wide")
+st.set_page_config(page_title="Relíquias", page_icon="⚜️", layout="wide")
 
 # ── Persistence ────────────────────────────────────────────────────────────────
 _cm = persistence.new_manager("relics")
@@ -70,6 +71,34 @@ if "rel_initialized" not in st.session_state:
                 st.session_state[f"iu_{_r}"]    = bool(_use) if _use is not None else True
     st.session_state["rel_initialized"] = True
 
+if "rel_epic_initialized" not in st.session_state:
+    _saved_e = persistence.load(_cm, "th_epics")
+    if _saved_e and "inv_epic_v1" in _saved_e:
+        for _r in EPIC_RELICS:
+            _rd = _saved_e["inv_epic_v1"].get(_r, {})
+            _idx = int(_rd.get("star_idx", 0) or 0)
+            _s, _l = idx_to_star_leg(_idx)
+            if _s == "0★": _l = "1/5"
+            st.session_state[f"estar_{_r}"] = _s if _s in STAR_OPTIONS else "0★"
+            st.session_state[f"eleg_{_r}"]  = _l if _l in _LEG_OPTIONS_ALL else "1/5"
+            st.session_state[f"espec_{_r}"] = int(_rd.get("spec", 0) or 0)
+            st.session_state[f"eu_{_r}"]    = bool(_rd.get("use", True))
+    st.session_state["rel_epic_initialized"] = True
+
+if "rel_rare_initialized" not in st.session_state:
+    _saved_r = persistence.load(_cm, "th_rares")
+    if _saved_r and "inv_rare_v1" in _saved_r:
+        for _r in RARE_RELICS:
+            _rd = _saved_r["inv_rare_v1"].get(_r, {})
+            _idx = min(int(_rd.get("star_idx", 0) or 0), RARE_MAX_LEVEL)
+            _s, _l = idx_to_star_leg(_idx)
+            if _s == "0★": _l = "1/5"
+            st.session_state[f"rstar_{_r}"] = _s if _s in STAR_OPTIONS_RARE else "0★"
+            st.session_state[f"rleg_{_r}"]  = _l if _l in _LEG_OPTIONS_ALL else "1/5"
+            st.session_state[f"rspec_{_r}"] = int(_rd.get("spec", 0) or 0)
+            st.session_state[f"ru_{_r}"]    = bool(_rd.get("use", True))
+    st.session_state["rel_rare_initialized"] = True
+
 
 def _inv_save_all():
     _inv_v3 = {}
@@ -83,6 +112,32 @@ def _inv_save_all():
         }
     st.session_state["inv_v3"] = _inv_v3
     persistence.save(_cm, "th_relics", {"inv_v3": _inv_v3})
+
+
+def _epic_save_all():
+    _inv = {}
+    for _r in EPIC_RELICS:
+        _s = st.session_state.get(f"estar_{_r}", "0★") or "0★"
+        _l = st.session_state.get(f"eleg_{_r}",  "1/5") or "1/5"
+        _inv[_r] = {
+            "star_idx": star_leg_to_idx(_s, _l),
+            "spec":     int(st.session_state.get(f"espec_{_r}", 0) or 0),
+            "use":      bool(st.session_state.get(f"eu_{_r}", True)),
+        }
+    persistence.save(_cm, "th_epics", {"inv_epic_v1": _inv})
+
+
+def _rare_save_all():
+    _inv = {}
+    for _r in RARE_RELICS:
+        _s = st.session_state.get(f"rstar_{_r}", "0★") or "0★"
+        _l = st.session_state.get(f"rleg_{_r}",  "1/5") or "1/5"
+        _inv[_r] = {
+            "star_idx": star_leg_to_idx(_s, _l),
+            "spec":     int(st.session_state.get(f"rspec_{_r}", 0) or 0),
+            "use":      bool(st.session_state.get(f"ru_{_r}", True)),
+        }
+    persistence.save(_cm, "th_rares", {"inv_rare_v1": _inv})
 
 
 # ── Language ───────────────────────────────────────────────────────────────────
@@ -165,11 +220,19 @@ _STAR_TIER_OPTS = (
     [f"B★{n}" for n in range(1, 6)]
 )
 
+_STAR_TIER_OPTS_RARE = (
+    ["0★"] +
+    [f"Y★{n}" for n in range(1, 6)] +
+    [f"R★{n}" for n in range(1, 6)] +
+    [f"P★{n}" for n in range(1, 6)] +
+    ["B★1", "B★2", "B★3"]
+)
+
 # ── Header ─────────────────────────────────────────────────────────────────────
 inject_global_css()
-st.title("⚜️ " + t("Otimizador de Relíquias", "Relic Optimizer"))
-st.caption(t("Calcula a rota ótima usando Martelos Milagrosos para trocar níveis de estrela entre relíquias.",
-             "Calculates the optimal route using Miracle Hammers to swap star levels between relics."))
+st.title("⚜️ " + t("Relíquias", "Relics"))
+st.caption(t("Gerencie seu inventário e calcule rotas de upgrade para todas as relíquias.",
+             "Manage your inventory and calculate upgrade routes for all relics."))
 
 LEG_OPTIONS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
 
@@ -181,12 +244,14 @@ _star_fmt = {
     **{f"B★{n}": f"{t('Preto','Black')} ★{n}" for n in range(1, 6)},
 }
 
-tab_main, tab_help = st.tabs([
-    "🔍 " + t("Otimizador", "Optimizer"),
+tab_leg, tab_epic, tab_rare, tab_help = st.tabs([
+    "⚜️ " + t("Lendárias", "Legendary"),
+    "🔮 " + t("Épicas", "Epic"),
+    "💎 " + t("Raras", "Rare"),
     "📖 " + t("Instruções & Referência", "Instructions & Reference"),
 ])
 
-with tab_main:
+with tab_leg:
 
     # ── Configuration ──────────────────────────────────────────────────────────────
     with st.expander(t("⚙️ Configuração", "⚙️ Configuration"), expanded=True):
@@ -575,6 +640,206 @@ with tab_main:
                             t("Frag. univ.", "Univ. shards"): step["u_used"] or "—",
                         })
                 st.dataframe(pd.DataFrame(step_rows), use_container_width=True, hide_index=True)
+
+with tab_epic:
+    st.caption(t(
+        "Acompanhe o nível de suas relíquias Épicas e calcule o custo de upgrades.",
+        "Track your Epic relic levels and calculate upgrade costs.",
+    ))
+
+    @st.fragment
+    def _epic_inventory_section():
+        _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
+        _hc1, _hc2 = st.columns([4, 7])
+        _hc1.caption(t("Relíquia", "Relic"))
+        _hc2.caption(t("Nível  ·  Frags. específicos  ·  Usar?", "Level  ·  Spec. shards  ·  Use?"))
+
+        for _relic in EPIC_RELICS:
+            _portrait = _load_portrait(_relic)
+            _c1, _c2 = st.columns([4, 7])
+            with _c1:
+                _cp, _cn = st.columns([1, 3])
+                with _cp:
+                    if _portrait is not None:
+                        st.image(_portrait, width=44)
+                    else:
+                        st.markdown("🔮")
+                with _cn:
+                    st.markdown(f"**{_rn(_relic)}**")
+                    st.caption(t("Épica", "Epic"))
+            with _c2:
+                _cur_star = st.session_state.get(f"estar_{_relic}", "0★") or "0★"
+                _cur_leg  = st.session_state.get(f"eleg_{_relic}",  "1/5") or "1/5"
+                _cur_idx  = star_leg_to_idx(_cur_star, _cur_leg)
+                _si_img, _si_w = _star_img_for_idx(_cur_idx, _BASE)
+                _cs, _cl = st.columns([5, 3])
+                with _cs:
+                    st.selectbox(
+                        "Star", _STAR_TIER_OPTS,
+                        format_func=lambda x: _star_fmt.get(x, x),
+                        key=f"estar_{_relic}",
+                        on_change=_epic_save_all,
+                        label_visibility="collapsed",
+                    )
+                with _cl:
+                    _leg_disabled = _cur_star == "0★"
+                    st.selectbox(
+                        "Leg", _LEG_OPTS,
+                        key=f"eleg_{_relic}",
+                        on_change=_epic_save_all,
+                        label_visibility="collapsed",
+                        disabled=_leg_disabled,
+                    )
+                _ci, _cf, _cu = st.columns([2, 4, 2])
+                with _ci:
+                    st.image(_si_img, width=_si_w)
+                with _cf:
+                    st.number_input(
+                        t("Frags. específicos", "Spec. shards"), min_value=0,
+                        key=f"espec_{_relic}",
+                        on_change=_epic_save_all,
+                    )
+                with _cu:
+                    st.checkbox(
+                        t("Usar?", "Use?"),
+                        key=f"eu_{_relic}",
+                        on_change=_epic_save_all,
+                    )
+        st.divider()
+
+    st.subheader(t("📦 Inventário — Épicas", "📦 Inventory — Epic"))
+    _epic_inventory_section()
+
+    st.markdown("---")
+    st.subheader(t("🧮 Calculadora Individual", "🧮 Individual Calculator"))
+    _ec1, _ec2, _ec3 = st.columns(3)
+    with _ec1:
+        _ecalc_disp = [_rn(r) for r in EPIC_RELICS]
+        _ecalc_d    = st.selectbox(t("Relíquia", "Relic"), _ecalc_disp, key="ecalc_relic")
+        _ecalc_r    = EPIC_RELICS[_ecalc_disp.index(_ecalc_d)]
+        _ep = _load_portrait(_ecalc_r)
+        if _ep:
+            st.image(_ep, width=44)
+    with _ec2:
+        _ec_star = st.session_state.get(f"estar_{_ecalc_r}", "0★") or "0★"
+        _ec_leg  = st.session_state.get(f"eleg_{_ecalc_r}",  "1/5") or "1/5"
+        _ec_cur  = star_leg_to_idx(_ec_star, _ec_leg)
+        _ec_cur_lbl = _star_fmt.get(_ec_star, _ec_star) + (f" {_ec_leg}" if _ec_star != "0★" else "")
+        st.markdown(f"**{t('Nível atual', 'Current level')}:** {_ec_cur_lbl}")
+        _ec_tgt_star = st.selectbox(
+            t("Estrela alvo", "Target star"), _STAR_TIER_OPTS[1:], key="ecalc_tgt_star",
+            format_func=lambda x: _star_fmt.get(x, x),
+        )
+        _ec_tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, key="ecalc_tgt_leg")
+    with _ec3:
+        _ec_tgt      = star_leg_to_idx(_ec_tgt_star, _ec_tgt_leg)
+        _ec_spec     = int(st.session_state.get(f"espec_{_ecalc_r}", 0) or 0)
+        _ec_needed   = epic_shards_needed(_ec_cur, _ec_tgt)
+        _ec_sp_used  = min(_ec_spec, _ec_needed)
+        _ec_univ     = max(0, _ec_needed - _ec_sp_used)
+        st.metric(t("Frags. necessários", "Shards needed"), f"{_ec_needed:,}")
+        st.metric(t("Esp. usados / disponíveis", "Spec. used / available"), f"{_ec_sp_used:,} / {_ec_spec:,}")
+        st.metric(t("Universais necessários", "Universal shards needed"), f"{_ec_univ:,}")
+
+with tab_rare:
+    st.caption(t(
+        "Acompanhe o nível de suas relíquias Raras e calcule o custo de upgrades.",
+        "Track your Rare relic levels and calculate upgrade costs.",
+    ))
+
+    @st.fragment
+    def _rare_inventory_section():
+        _LEG_OPTS = ["1/5", "2/5", "3/5", "4/5", "5/5"]
+        _hc1, _hc2 = st.columns([4, 7])
+        _hc1.caption(t("Relíquia", "Relic"))
+        _hc2.caption(t("Nível  ·  Frags. específicos  ·  Usar?", "Level  ·  Spec. shards  ·  Use?"))
+
+        for _relic in RARE_RELICS:
+            _portrait = _load_portrait(_relic)
+            _c1, _c2 = st.columns([4, 7])
+            with _c1:
+                _cp, _cn = st.columns([1, 3])
+                with _cp:
+                    if _portrait is not None:
+                        st.image(_portrait, width=44)
+                    else:
+                        st.markdown("💎")
+                with _cn:
+                    st.markdown(f"**{_rn(_relic)}**")
+                    st.caption(t("Rara", "Rare"))
+            with _c2:
+                _cur_star = st.session_state.get(f"rstar_{_relic}", "0★") or "0★"
+                _cur_leg  = st.session_state.get(f"rleg_{_relic}",  "1/5") or "1/5"
+                _cur_idx  = star_leg_to_idx(_cur_star, _cur_leg)
+                _si_img, _si_w = _star_img_for_idx(_cur_idx, _BASE)
+                _cs, _cl = st.columns([5, 3])
+                with _cs:
+                    st.selectbox(
+                        "Star", _STAR_TIER_OPTS_RARE,
+                        format_func=lambda x: _star_fmt.get(x, x),
+                        key=f"rstar_{_relic}",
+                        on_change=_rare_save_all,
+                        label_visibility="collapsed",
+                    )
+                with _cl:
+                    _leg_disabled = _cur_star == "0★"
+                    st.selectbox(
+                        "Leg", _LEG_OPTS,
+                        key=f"rleg_{_relic}",
+                        on_change=_rare_save_all,
+                        label_visibility="collapsed",
+                        disabled=_leg_disabled,
+                    )
+                _ci, _cf, _cu = st.columns([2, 4, 2])
+                with _ci:
+                    st.image(_si_img, width=_si_w)
+                with _cf:
+                    st.number_input(
+                        t("Frags. específicos", "Spec. shards"), min_value=0,
+                        key=f"rspec_{_relic}",
+                        on_change=_rare_save_all,
+                    )
+                with _cu:
+                    st.checkbox(
+                        t("Usar?", "Use?"),
+                        key=f"ru_{_relic}",
+                        on_change=_rare_save_all,
+                    )
+        st.divider()
+
+    st.subheader(t("📦 Inventário — Raras", "📦 Inventory — Rare"))
+    _rare_inventory_section()
+
+    st.markdown("---")
+    st.subheader(t("🧮 Calculadora Individual", "🧮 Individual Calculator"))
+    _rc1, _rc2, _rc3 = st.columns(3)
+    with _rc1:
+        _rcalc_disp = [_rn(r) for r in RARE_RELICS]
+        _rcalc_d    = st.selectbox(t("Relíquia", "Relic"), _rcalc_disp, key="rcalc_relic")
+        _rcalc_r    = RARE_RELICS[_rcalc_disp.index(_rcalc_d)]
+        _rp = _load_portrait(_rcalc_r)
+        if _rp:
+            st.image(_rp, width=44)
+    with _rc2:
+        _rc_star = st.session_state.get(f"rstar_{_rcalc_r}", "0★") or "0★"
+        _rc_leg  = st.session_state.get(f"rleg_{_rcalc_r}",  "1/5") or "1/5"
+        _rc_cur  = star_leg_to_idx(_rc_star, _rc_leg)
+        _rc_cur_lbl = _star_fmt.get(_rc_star, _rc_star) + (f" {_rc_leg}" if _rc_star != "0★" else "")
+        st.markdown(f"**{t('Nível atual', 'Current level')}:** {_rc_cur_lbl}")
+        _rc_tgt_star = st.selectbox(
+            t("Estrela alvo", "Target star"), _STAR_TIER_OPTS_RARE[1:], key="rcalc_tgt_star",
+            format_func=lambda x: _star_fmt.get(x, x),
+        )
+        _rc_tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, key="rcalc_tgt_leg")
+    with _rc3:
+        _rc_tgt      = star_leg_to_idx(_rc_tgt_star, _rc_tgt_leg)
+        _rc_spec     = int(st.session_state.get(f"rspec_{_rcalc_r}", 0) or 0)
+        _rc_needed   = rare_shards_needed(_rc_cur, _rc_tgt)
+        _rc_sp_used  = min(_rc_spec, _rc_needed)
+        _rc_univ     = max(0, _rc_needed - _rc_sp_used)
+        st.metric(t("Frags. necessários", "Shards needed"), f"{_rc_needed:,}")
+        st.metric(t("Esp. usados / disponíveis", "Spec. used / available"), f"{_rc_sp_used:,} / {_rc_spec:,}")
+        st.metric(t("Universais necessários", "Universal shards needed"), f"{_rc_univ:,}")
 
 with tab_help:
     _hi1, _hi2 = st.tabs([
