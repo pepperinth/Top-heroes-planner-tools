@@ -207,6 +207,11 @@ with tab_main:
                 _set_opts = [t(_SET_PT[k], k) for k in SETS.keys()]
                 _set_disp = st.selectbox(t("Conjunto alvo", "Target set"), _set_opts, index=0)
                 target_set = {"Liga": "League", "Horda": "Horde", "Natureza": "Nature"}.get(_set_disp, _set_disp)
+                _set_img_cols = st.columns(3)
+                for _si, _sr in enumerate(SETS[target_set]):
+                    _p = _load_portrait(_sr)
+                    if _p:
+                        with _set_img_cols[_si]: st.image(_p, width=28)
             with c2:
                 tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0,
                                         format_func=lambda x: _star_fmt.get(x, x))
@@ -256,6 +261,9 @@ with tab_main:
                 single_relic = _rn_en(single_relic_d)
                 relic_kind = t("Universal", "Universal") if single_relic in UNIVERSAL_RELICS else t("Set", "Set")
                 st.caption(relic_kind)
+                _portrait_cfg = _load_portrait(single_relic)
+                if _portrait_cfg:
+                    st.image(_portrait_cfg, width=28)
             with s2:
                 tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0, key="sr_tgt_star",
                                         format_func=lambda x: _star_fmt.get(x, x))
