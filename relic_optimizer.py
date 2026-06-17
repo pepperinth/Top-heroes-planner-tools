@@ -526,7 +526,6 @@ def best_chain_for_target(
             for sub in combinations(rest_mand, n_rest):
                 for pre in permutations(sub):
                     try_chain([pre[0], fr_relic] + list(pre[1:]))
-                    if done(): return best_lv, best_u, best_st
         else:
             n_opt_need = n_rest - n_mand_r
             for n_pick in range(min(n_opt_need, len(rest_opt)), -1, -1):
@@ -536,7 +535,6 @@ def best_chain_for_target(
                         continue
                     for pre in permutations(pool):
                         try_chain([pre[0], fr_relic] + list(pre[1:]))
-                        if done(): return best_lv, best_u, best_st
                 if best_lv >= 0:
                     break
     else:
@@ -548,7 +546,6 @@ def best_chain_for_target(
             for subset in combinations(mandatory, n_hammers):
                 for perm in permutations(subset):
                     try_chain(list(perm))
-                    if done(): return best_lv, best_u, best_st
         else:
             n_opt_need = n_hammers - n_mand
             for n_pick in range(min(n_opt_need, len(optional)), -1, -1):
@@ -556,7 +553,6 @@ def best_chain_for_target(
                     pool = mandatory + list(opt_combo)
                     for perm in permutations(pool):
                         try_chain(list(perm))
-                        if done(): return best_lv, best_u, best_st
                 if best_lv >= 0:
                     break
 
@@ -839,9 +835,10 @@ def compute_route(inv: dict) -> dict:
                 f"Atenção: {cmp_label} não é a escolha mais eficiente. "
                 "O resultado ótimo está disponível abaixo."
             )
-            cmp_result["suboptimal_note"] = ""
-            cmp_result["optimal_result"]  = None
-            optimal_result = cmp_result
+        cmp_result["suboptimal_note"] = ""
+        cmp_result["optimal_result"]  = None
+        cmp_result["_is_sub"] = _is_sub
+        optimal_result = cmp_result
 
     best_result["suboptimal_note"] = suboptimal_note
     best_result["optimal_result"]  = optimal_result
