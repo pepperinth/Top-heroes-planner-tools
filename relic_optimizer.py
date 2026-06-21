@@ -559,6 +559,128 @@ def best_chain_for_target(
     return best_lv, best_u, best_st
 
 
+# ── Boomerang chain support ────────────────────────────────────────────────────
+
+def simulate_boomerang(
+    target_name:     str,
+    target_level:    int,
+    target_specific: int,
+    relay_relics:    list,
+    universal_pool:  int,
+    target_goal:     int,
+) -> tuple:
+    """
+    Boomerang chain: target donates its level to a relay chain and receives the
+    elevated level back at the end, then develops with remaining universals.
+
+    Invariant (top-ups inside the relay cancel out):
+      final_cumul = CUMUL[target_level] + sum(relay_specific) + universal_pool
+
+    relay_relics: [(name, orig_level, specific_shards), ...] in chain order.
+    Returns (final_level_idx, total_u_used, steps) or None.
+    """
+    if not relay_relics:
+        return None
+
+    relay_spec_sum = sum(r[2] for r in relay_relics)
+    inv_cumul      = min(CUMUL[target_level] + relay_spec_sum + universal_pool, CUMUL[100])
+    final_inv      = max(i for i in range(101) if CUMUL[i] <= inv_cumul)
+
+    if final_inv <= target_level:
+        return None
+
+    steps         = []
+    carrier_name  = target_name
+    carrier_lv    = target_level
+    target_cur_lv = target_level  # target's level as swaps happen
+    remaining_u   = universal_pool
+
+    for r_name, r_orig_lv, r_spec in relay_relics:
+        swap = {
+            "type":    "swap",
+            "relic_a": carrier_name, "a_from": carrier_lv,  "a_to": r_orig_lv,
+            "relic_b": r_name,       "b_from": r_orig_lv,   "b_to": carrier_lv,
+        }
+        steps.append(swap)
+
+        if carrier_name == target_name:
+            target_cur_lv = r_orig_lv  # target reset to first relay's original level
+
+        opts = chain_develop_options(carrier_lv, r_spec, remaining_u)
+        achieved_lv, sp_used, u_used = max(opts, key=lambda x: (x[0], -x[2]))
+        dev = {
+            "type":    "develop",
+            "relic":   r_name,
+            "from":    carrier_lv, "to":      achieved_lv,
+            "sp_used": sp_used,    "u_used":  u_used,
+        }
+        steps.append(dev)
+        remaining_u -= u_used
+        carrier_name = r_name
+        carrier_lv   = achieved_lv
+
+    # Final swap: last relay back to target
+    steps.append({
+        "type":    "swap",
+        "relic_a": carrier_name, "a_from": carrier_lv,    "a_to": target_cur_lv,
+        "relic_b": target_name,  "b_from": target_cur_lv, "b_to": carrier_lv,
+    })
+
+    achieved, sp_used, u_used = develop_max(carrier_lv, target_specific, remaining_u, cap=target_goal)
+    steps.append({
+        "type":    "develop",
+        "relic":   target_name,
+        "from":    carrier_lv, "to":      achieved,
+        "sp_used": sp_used,    "u_used":  u_used,
+    })
+
+    if achieved <= target_level:
+        return None
+    return achieved, (universal_pool - remaining_u) + u_used, steps
+
+
+def best_boomerang_for_target(
+    available_relics: list,
+    n_hammers:        int,
+    target_name:      str,
+    target_level:     int,
+    target_specific:  int,
+    universal_pool:   int,
+    target_goal:      int,
+) -> tuple:
+    """
+    Try all relay combinations for a boomerang chain (target is its own seed).
+    n_relays = n_hammers - 1.
+
+    Returns (best_level_idx, u_used, steps), or (-1, inf, None).
+    """
+    n_relays    = n_hammers - 1
+    spec_relics = [(n, lv, sp) for n, lv, sp in available_relics if sp > 0]
+    if n_relays < 1 or not spec_relics:
+        return -1, float("inf"), None
+
+    best_lv = -1
+    best_u  = float("inf")
+    best_st = None
+
+    for n_rel in range(min(n_relays, len(spec_relics)), 0, -1):
+        for combo in combinations(spec_relics, n_rel):
+            for perm in permutations(combo):
+                res = simulate_boomerang(
+                    target_name, target_level, target_specific,
+                    list(perm), universal_pool, target_goal,
+                )
+                if res is None:
+                    continue
+                lv, u, st = res
+                if lv > best_lv or (lv == best_lv and u < best_u):
+                    best_lv, best_u, best_st = lv, u, st
+        if best_lv >= target_goal:
+            break
+
+    return best_lv, best_u, best_st
+
+
 # ── Route scoring ──────────────────────────────────────────────────────────────
 
 def score_route(
@@ -670,11 +792,13 @@ def _evaluate_config(
         if h == 0:
             continue
 
-        chain_mand = set(mand_assign.get(target, []))
+        chain_mand    = set(mand_assign.get(target, []))
+        other_reserved = {m for t2, mlist in mand_assign.items()
+                          if t2 != target for m in mlist}
         available  = [
             (r, levels[r], specific.get(r, 0))
             for r in UNIVERSAL_RELICS
-            if r not in used
+            if r not in used and r not in other_reserved
         ]
         fr = (first_relays or {}).get(target)
 
@@ -684,6 +808,21 @@ def _evaluate_config(
             universal, target_goal,
             first_relay=fr,
         )
+
+        # Try boomerang (target as its own seed) when normal chain fails or may be suboptimal.
+        # Boomerang is effective when target's current level exceeds all available relay levels.
+        if h >= 2:
+            b_lv, b_u, b_st = best_boomerang_for_target(
+                available, h,
+                target, levels[target], specific.get(target, 0),
+                universal, target_goal,
+            )
+            if b_st is not None and (
+                steps is None
+                or b_lv > lv
+                or (b_lv == lv and b_u < u)
+            ):
+                lv, u, steps = b_lv, b_u, b_st
 
         if steps is None:
             return None, None
