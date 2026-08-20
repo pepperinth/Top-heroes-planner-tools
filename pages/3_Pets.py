@@ -88,6 +88,14 @@ with st.sidebar:
 lang = st.session_state.lang
 def t(pt, en): return pt if lang == "pt" else en
 
+_PROMO_PT = {"RARE": "RARO", "EPIC": "ÉPICO", "LEGENDARY": "LENDÁRIO", "MYTHIC": "MÍTICO"}
+def tpromo(lbl: str) -> str:
+    if lang != "pt":
+        return lbl
+    for en, pt in _PROMO_PT.items():
+        lbl = lbl.replace(en, pt)
+    return lbl
+
 _FS = {True: t("★ Exclusivo da Facção", "★ Faction-Specific"),
        False: t("Universal", "Universal"),
        None: "—"}
@@ -104,15 +112,15 @@ st.caption(t(
 st.subheader("📦 " + t("Recursos", "Resources"))
 rc1, rc2, rc3, rc4 = st.columns(4)
 with rc1:
-    inv_food = st.number_input(t("🍗 Pet Food", "🍗 Pet Food"),
+    inv_food = st.number_input(t("🍗 Ração de Pet", "🍗 Pet Food"),
                                 min_value=0, value=0, step=1000, key="pet_food",
                                 on_change=_pets_save)
 with rc2:
-    inv_ess = st.number_input(t("💎 Pet Essence", "💎 Pet Essence"),
+    inv_ess = st.number_input(t("💎 Essência de Pet", "💎 Pet Essence"),
                                min_value=0, value=0, step=100, key="pet_ess",
                                on_change=_pets_save)
 with rc3:
-    inv_box = st.number_input(t("🎁 Rare Pet Choice Box", "🎁 Rare Pet Choice Box"),
+    inv_box = st.number_input(t("🎁 Caixa de Pet Raro (escolha)", "🎁 Rare Pet Choice Box"),
                                min_value=0, value=0, step=1, key="pet_box",
                                on_change=_pets_save)
 with rc4:
@@ -200,7 +208,8 @@ with tab_calc:
         selected_pet = st.selectbox(t("Pet selecionado", "Selected pet"), pet_names, key="calc_pet")
     with cc2:
         current_promo_lbl = st.selectbox(t("Promoção atual", "Current promotion"),
-                                          promo_labels, key="calc_promo")
+                                          promo_labels, key="calc_promo",
+                                          format_func=tpromo)
     with cc3:
         current_level = st.number_input(t("Nível atual", "Current level"),
                                          min_value=1, max_value=MAX_LEVEL, value=1, key="calc_lvl")
@@ -216,6 +225,7 @@ with tab_calc:
             target_promo_lbl = st.selectbox(
                 t("⭐ Promoção alvo", "⭐ Target promotion"),
                 _higher_promos, key="calc_tgt_promo",
+                format_func=tpromo,
             )
         else:
             target_promo_lbl = None
@@ -273,7 +283,7 @@ with tab_calc:
         st.markdown(
             f'<div style="border-left:5px solid {_tgt_fc};padding:5px 14px;'
             f'border-radius:0 8px 8px 0;background:{_tgt_fc}14;font-weight:700;margin:8px 0 6px;">'
-            f'🎯 {t("Recursos para atingir", "Resources to reach")} {target_promo_lbl} '
+            f'🎯 {t("Recursos para atingir", "Resources to reach")} {tpromo(target_promo_lbl)} '
             f'({t("nível mín.", "min. level")} {_tgt_entry[0]})</div>',
             unsafe_allow_html=True,
         )
@@ -288,7 +298,7 @@ with tab_calc:
         _pm4.metric(t("🎲 Qualquer pet", "🎲 Any pet"),  f"{_res_promo['any']:,}"     if _res_promo['any']     else "—")
         if current_level < _tgt_entry[0]:
             st.caption(t(
-                f"⚠️ Nível mínimo para {target_promo_lbl}: **{_tgt_entry[0]}** (atual: {current_level})",
+                f"⚠️ Nível mínimo para {tpromo(target_promo_lbl)}: **{_tgt_entry[0]}** (atual: {current_level})",
                 f"⚠️ Minimum level for {target_promo_lbl}: **{_tgt_entry[0]}** (current: {current_level})",
             ))
 
@@ -298,7 +308,7 @@ with tab_calc:
                 if (PROMO_INDEX[_p[1]] > PROMO_INDEX[current_promo_lbl]
                         and PROMO_INDEX[_p[1]] <= PROMO_INDEX[target_promo_lbl]):
                     _step_rows.append({
-                        t("Promoção", "Promotion"):               _p[1],
+                        t("Promoção", "Promotion"):               tpromo(_p[1]),
                         t("Nível mín.", "Min Lvl"):               _p[0],
                         f"📦 {selected_pet}":                     _p[3] if _p[3] else "—",
                         t("🎲 Qualquer pet", "🎲 Any pet"):       _p[4] if _p[4] else "—",
@@ -318,18 +328,18 @@ with tab_calc:
     st.markdown(
         f'<div style="border-left:5px solid {_pet_fc};padding:5px 14px;'
         f'border-radius:0 8px 8px 0;background:{_pet_fc}14;font-weight:700;margin:8px 0 6px;">'
-        f'📌 {t("Marcos de Tier — recursos restantes","Tier Milestones — remaining resources")}</div>',
+        f'📌 {t("Marcos de Tier","Tier Milestones")}</div>',
         unsafe_allow_html=True,
     )
     st.caption(t(
-        "Quanto ainda falta a partir do seu estado atual para atingir cada tier.",
-        "How much you still need from your current state to reach each tier.",
+        "Custo total de promoções a partir do estado atual. Expanda cada tier para ver o detalhamento por passo.",
+        "Total promotion cost from your current state. Expand each tier to see the per-step breakdown.",
     ))
 
     tier_cfgs = [
-        ("EPIC",      f"⚔️ EPIC ☆ (lv {TIER_MIN_LEVEL['EPIC']})",           1),
-        ("LEGENDARY", f"👑 LEGENDARY ☆ (lv {TIER_MIN_LEVEL['LEGENDARY']})", 2),
-        ("MYTHIC",    f"💀 MYTHIC (lv {TIER_MIN_LEVEL['MYTHIC']})",         3),
+        ("EPIC",      f"⚔️ {tpromo('EPIC ☆')} (lv {TIER_MIN_LEVEL['EPIC']})",           1),
+        ("LEGENDARY", f"👑 {tpromo('LEGENDARY ☆')} (lv {TIER_MIN_LEVEL['LEGENDARY']})", 2),
+        ("MYTHIC",    f"💀 {tpromo('MYTHIC')} (lv {TIER_MIN_LEVEL['MYTHIC']})",         3),
     ]
 
     t_cols = st.columns(3)
@@ -345,42 +355,80 @@ with tab_calc:
             if reached:
                 st.success(t("Tier já alcançado!", "Tier already reached!"))
             else:
-                target_label = TIER_TARGET_PROMO_LABEL[tier]
+                target_label  = TIER_TARGET_PROMO_LABEL[tier]
                 tgt_same_cum, tgt_any_cum, tgt_promo_ess_cum = promo_cum(target_label)
                 cur_same_cum, cur_any_cum, cur_promo_ess_cum = promo_cum(current_promo_lbl)
-                tgt_min_lvl  = TIER_MIN_LEVEL[tier]
-                tgt_food     = FOOD_AT_LEVEL.get(tgt_min_lvl, 0)
-                cur_food     = FOOD_AT_LEVEL.get(current_level, 0)
-                tgt_ess      = ESS_AT_LEVEL.get(tgt_min_lvl, 0) + tgt_promo_ess_cum
-                cur_ess      = ESS_AT_LEVEL.get(current_level, 0) + cur_promo_ess_cum
+                tgt_min_lvl   = TIER_MIN_LEVEL[tier]
 
-                _col_res  = t("Recurso", "Resource")
-                _col_tot  = t("Total", "Total")
-                _col_sp   = t("Gasto", "Spent")
-                _col_need = t("Falta", "Still Need")
+                # Gross cost from current state to this milestone (no inventory deducted)
+                need_food = max(0, FOOD_AT_LEVEL.get(tgt_min_lvl, 0) - FOOD_AT_LEVEL.get(current_level, 0))
+                need_same = max(0, tgt_same_cum - cur_same_cum)
+                need_any  = max(0, tgt_any_cum  - cur_any_cum)
+                need_ess  = max(0,
+                    (ESS_AT_LEVEL.get(tgt_min_lvl, 0) - ESS_AT_LEVEL.get(current_level, 0))
+                    + (tgt_promo_ess_cum - cur_promo_ess_cum))
+
+                # What's available in inventory
+                surplus_same = max(0, inv_same_selected - need_same)
+                have_any     = total_any + surplus_same
+
+                _cr = t("Recurso", "Resource")
+                _cn = t("Necessário", "Need")
+                _ch = t("Tenho", "Have")
+                _cm = t("Falta", "Missing")
 
                 _rows = [
-                    {_col_res: t("🍗 Comida", "🍗 Food"),
-                     _col_tot: f"{tgt_food:,}",
-                     _col_sp:  f"{cur_food:,}",
-                     _col_need: f"{max(0, tgt_food - cur_food - inv_food):,}"},
-                    {_col_res: f"📦 {selected_pet}",
-                     _col_tot: f"{tgt_same_cum:,}",
-                     _col_sp:  f"{cur_same_cum:,}",
-                     _col_need: f"{max(0, tgt_same_cum - cur_same_cum - inv_same_selected):,}"},
-                    {_col_res: t("🎲 Qualquer pet", "🎲 Any pet"),
-                     _col_tot: f"{tgt_any_cum:,}",
-                     _col_sp:  f"{cur_any_cum:,}",
-                     _col_need: f"{max(0, tgt_any_cum - cur_any_cum - total_any):,}"},
+                    {_cr: t("🍗 Food", "🍗 Food"),
+                     _cn: f"{need_food:,}",
+                     _ch: f"{inv_food:,}",
+                     _cm: f"{max(0, need_food - inv_food):,}"},
+                    {_cr: f"📦 {selected_pet}",
+                     _cn: f"{need_same:,}",
+                     _ch: f"{inv_same_selected:,}",
+                     _cm: f"{max(0, need_same - inv_same_selected):,}"},
+                    {_cr: t("🎲 Any pet", "🎲 Any pet"),
+                     _cn: f"{need_any:,}",
+                     _ch: f"{have_any:,}",
+                     _cm: f"{max(0, need_any - have_any):,}"},
                 ]
-                if tgt_ess > 0:
-                    _rows.append(
-                        {_col_res: t("💎 Essência", "💎 Essence"),
-                         _col_tot: f"{tgt_ess:,}",
-                         _col_sp:  f"{cur_ess:,}",
-                         _col_need: f"{max(0, tgt_ess - cur_ess - inv_ess):,}"}
-                    )
+                if need_ess > 0:
+                    _rows.append({
+                        _cr: t("💎 Essence", "💎 Essence"),
+                        _cn: f"{need_ess:,}",
+                        _ch: f"{inv_ess:,}",
+                        _cm: f"{max(0, need_ess - inv_ess):,}",
+                    })
                 st.dataframe(pd.DataFrame(_rows), use_container_width=True, hide_index=True)
+
+                # ── Per-step breakdown expander (Proposta C) ──────────────────
+                _steps = [p for p in PROMO_LIST
+                          if PROMO_INDEX[p[1]] > PROMO_INDEX[current_promo_lbl]
+                          and PROMO_INDEX[p[1]] <= PROMO_INDEX[target_label]]
+                with st.expander(t("📋 Ver por passo de promoção", "📋 View per promotion step")):
+                    _sr = []
+                    for _p in _steps:
+                        _sr.append({
+                            t("Promoção", "Promotion"):         _p[1],
+                            t("Lv", "Lv"):                      _p[0],
+                            f"📦 {selected_pet}":               _p[3] if _p[3] else "—",
+                            t("🎲 Qualquer", "🎲 Any"):         _p[4] if _p[4] else "—",
+                            t("💎 Ess. promo", "💎 Promo Ess"): _p[5] if _p[5] else "—",
+                        })
+                    st.dataframe(pd.DataFrame(_sr), use_container_width=True, hide_index=True)
+
+                    _tot_same = sum(p[3] for p in _steps)
+                    _tot_any  = sum(p[4] for p in _steps)
+                    _tot_ess  = sum(p[5] for p in _steps)
+                    st.caption(
+                        t("**Total bruto:**", "**Gross total:**") + f" "
+                        f"{_tot_same} {selected_pet} · {_tot_any} any"
+                        + (f" · {_tot_ess:,} {t('ess. promo','promo ess.')}" if _tot_ess else "")
+                    )
+                    if surplus_same:
+                        st.caption(t(
+                            f"ℹ️ {surplus_same} {selected_pet} excedentes contados como any.",
+                            f"ℹ️ {surplus_same} surplus {selected_pet} counted as any.",
+                        ))
 
     st.markdown("---")
     st.markdown("**🎯 " + t("Nível alvo (opcional)", "Target level (optional)") + "**")
@@ -428,26 +476,73 @@ with tab_calc:
         )
         sel_tier = next(tier for tier, label in unreached if label == sel_label)
 
+        # Gross cost from current state to milestone (resources that will actually be SPENT)
         ms_g = calc_milestone(sel_tier, current_level, current_promo_lbl, 0, 0, 0, 0)
 
-        ev_pet_c   = next(e for e in EVENTS if e["sheet"] == "Pet_Ranking")
-        ev_pcname  = ev_pet_c.get("name_pt", ev_pet_c["name"]) if lang == "pt" else ev_pet_c["name"]
+        ev_pet_c  = next(e for e in EVENTS if e["sheet"] == "Pet_Ranking")
+        ev_pcname = ev_pet_c.get("name_pt", ev_pet_c["name"]) if lang == "pt" else ev_pet_c["name"]
 
-        pts_food_c   = ms_g["food"] * 0.3
-        pts_ess_c    = ms_g["essence"] * 15
         tot_rare_c   = ms_g["same"] + ms_g["any"]
-        pts_rare_c   = tot_rare_c * 900
-        pts_common_c = inv_common * 150
+        pts_food_c   = ms_g["food"]    * 0.3
+        pts_ess_c    = ms_g["essence"] * 15
+        pts_rare_c   = tot_rare_c      * 900
+        pts_common_c = inv_common      * 150
         pts_evt_c    = pts_food_c + pts_ess_c + pts_rare_c + pts_common_c
 
-        ec1, ec2, ec3, ec4, ec5 = st.columns(5)
-        ec1.metric(t("🍗 Comida", "🍗 Food"),          f"{pts_food_c:,.0f} pts")
-        ec2.metric(t("💎 Essência", "💎 Essence"),      f"{pts_ess_c:,.0f} pts")
-        ec3.metric(t("🐾 Raros", "🐾 Rare"),            f"{pts_rare_c:,.0f} pts",
-                   help=t(f"{tot_rare_c} cópias × 900", f"{tot_rare_c} copies × 900"))
-        ec4.metric(t("🐾 Comuns", "🐾 Common"),         f"{pts_common_c:,.0f} pts",
-                   help=t(f"{inv_common} pets × 150", f"{inv_common} pets × 150"))
-        ec5.metric(f"📊 {ev_pcname}",                   f"{pts_evt_c:,.0f} pts")
+        st.caption(t(
+            f"Recursos gastos ao promover **{selected_pet}** de **{tpromo(current_promo_lbl)}** "
+            f"(lv {current_level}) até **{sel_label}** e os pontos gerados no evento:",
+            f"Resources spent promoting **{selected_pet}** from **{current_promo_lbl}** "
+            f"(lv {current_level}) to **{sel_label}**, and the event points they generate:",
+        ))
+
+        _es = t("Fonte do gasto", "What's spent")
+        _eq = t("Qtd gasta", "Amount spent")
+        _er = t("Taxa", "Rate")
+        _ep = t("Pontos", "Points")
+
+        _evt_rows = []
+        if ms_g["food"] > 0:
+            _evt_rows.append({
+                _es: t("🍗 Pet Food (subir de nível até o mín. do tier)", "🍗 Pet Food (leveling up to tier min. level)"),
+                _eq: f"{ms_g['food']:,}",
+                _er: "× 0.3",
+                _ep: f"{pts_food_c:,.0f}",
+            })
+        if ms_g["essence"] > 0:
+            _evt_rows.append({
+                _es: t("💎 Pet Essence (custo das promoções LEGENDARY+)", "💎 Pet Essence (LEGENDARY+ promotion cost)"),
+                _eq: f"{ms_g['essence']:,}",
+                _er: "× 15",
+                _ep: f"{pts_ess_c:,.0f}",
+            })
+        if tot_rare_c > 0:
+            _evt_rows.append({
+                _es: t(
+                    f"🐾 Cópias Raras usadas nas promoções "
+                    f"({ms_g['same']} {selected_pet} + {ms_g['any']} any)",
+                    f"🐾 Rare copies used in promotions "
+                    f"({ms_g['same']} {selected_pet} + {ms_g['any']} any)",
+                ),
+                _eq: f"{tot_rare_c:,}",
+                _er: "× 900",
+                _ep: f"{pts_rare_c:,.0f}",
+            })
+        _evt_rows.append({
+            _es: t(
+                f"🐾 Pets Comuns do inventário (usados como material de EXP)",
+                f"🐾 Common pets from inventory (used as EXP material)",
+            ),
+            _eq: f"{inv_common:,}",
+            _er: "× 150",
+            _ep: f"{pts_common_c:,.0f}",
+        })
+
+        st.dataframe(pd.DataFrame(_evt_rows), use_container_width=True, hide_index=True)
+
+        _tot_col, _ = st.columns([1, 2])
+        with _tot_col:
+            st.metric(f"📊 {t('Total de pontos','Total points')} — {ev_pcname}", f"{pts_evt_c:,.0f}")
 
         ms_icons_c2 = "  ".join(
             f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
@@ -457,10 +552,10 @@ with tab_calc:
 
         if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_pet_calc_evt"):
             st.session_state["_pts_to_send_Pet_Ranking"]    = int(pts_evt_c)
-            st.session_state["_calc_contrib_Pet_Ranking_1"] = int(ms_g["essence"] * 15)
-            st.session_state["_calc_contrib_Pet_Ranking_2"] = int(ms_g["food"] * 0.3)
-            st.session_state["_calc_contrib_Pet_Ranking_3"] = int(inv_common * 150)
-            st.session_state["_calc_contrib_Pet_Ranking_4"] = int(tot_rare_c * 900)
+            st.session_state["_calc_contrib_Pet_Ranking_1"] = int(pts_ess_c)
+            st.session_state["_calc_contrib_Pet_Ranking_2"] = int(pts_food_c)
+            st.session_state["_calc_contrib_Pet_Ranking_3"] = int(pts_common_c)
+            st.session_state["_calc_contrib_Pet_Ranking_4"] = int(pts_rare_c)
             st.session_state["_calc_sent_Pet_Ranking"]      = True
             st.success(t(
                 f"✅ {pts_evt_c:,.0f} pts enviados para **{ev_pcname}**! Acesse Eventos Regulares para ver.",
@@ -485,17 +580,18 @@ with tab_plan:
     with bp1:
         bp_pet = st.selectbox(t("Pet", "Pet"), pet_names, key="bp_pet")
     with bp2:
-        bp_promo = st.selectbox(t("Promoção atual", "Current promotion"), promo_labels, key="bp_promo")
+        bp_promo = st.selectbox(t("Promoção atual", "Current promotion"), promo_labels,
+                                key="bp_promo", format_func=tpromo)
     with bp3:
         bp_lvl = st.number_input(t("Nível atual", "Current level"), 1, MAX_LEVEL, 1, key="bp_lvl")
     with bp4:
         bp_tier = st.selectbox(t("Promoção alvo", "Target promotion"),
-                                promo_labels, key="bp_tier")
+                                promo_labels, key="bp_tier", format_func=tpromo)
 
     if st.button("➕ " + t("Adicionar", "Add"), key="bp_add"):
         if PROMO_INDEX[bp_tier] <= PROMO_INDEX[bp_promo]:
             st.warning(t(
-                f"⚠️ {bp_pet} já está em '{bp_promo}' — alvo '{bp_tier}' já alcançado ou igual.",
+                f"⚠️ {bp_pet} já está em '{tpromo(bp_promo)}' — alvo '{tpromo(bp_tier)}' já alcançado ou igual.",
                 f"⚠️ {bp_pet} is already at '{bp_promo}' — target '{bp_tier}' already reached or equal.",
             ))
         else:
@@ -529,7 +625,8 @@ with tab_plan:
         _ca = "🎲 " + t("Qualquer", "Any")
         _ce = "💎 " + t("Essência", "Essence")
 
-        rows = [{_cp: e["pet"], _cr: e["promo"], _cl: e["cur_lv"], _ct: e["target"],
+        rows = [{_cp: e["pet"], _cr: tpromo(e["promo"]), _cl: e["cur_lv"],
+                 _ct: tpromo(e["target"]),
                  _cf: e["food"], _cs: e["same"], _ca: e["any"], _ce: e["essence"]}
                 for e in plan]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
