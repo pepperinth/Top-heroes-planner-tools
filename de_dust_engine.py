@@ -240,6 +240,31 @@ S3_R = [
     {"name": "Faction March Size",    "name_pt": "Tamanho de Marcha de Facção", "levels": [20,24,28,34,40,48,58,69,83,98]},
 ]
 
+BI2_R = [
+    # Unlocks when BI1 reaches 70% completion (≈ 21 000 Dust)
+    # Required for T12 troops. Total: 23 711 Dust (all factions × 1).
+    {"name": "March Size 1",     "levels": [50, 55, 61, 66, 75]},
+    {"name": "Soldier Attack 1", "levels": [40, 44, 49, 54, 60, 66, 73, 81, 90, 99]},
+    {"name": "Soldier HP 1",     "levels": [40, 44, 49, 54, 60, 66, 73, 81, 90, 99]},
+    {"name": "Hero Level Cap 1", "levels": [150]},
+    {"name": "Hero Attack 1",    "levels": [60, 66, 73, 81, 90, 99, 109, 120, 132, 145]},
+    {"name": "Hero HP 1",        "levels": [60, 66, 73, 81, 90, 99, 109, 120, 132, 145]},
+    {"name": "March Size 2",     "levels": [125, 138, 152, 168, 185]},
+    {"name": "Soldier Attack 2", "levels": [75, 83, 92, 102, 113, 125, 138, 152, 168, 186]},
+    {"name": "Soldier HP 2",     "levels": [75, 83, 92, 102, 113, 125, 138, 152, 168, 186]},
+    {"name": "Hero Level Cap 2", "levels": [250]},
+    {"name": "Hero Attack 2",    "levels": [100, 110, 121, 134, 148, 163, 180, 198, 218, 240]},
+    {"name": "Hero HP 2",        "levels": [100, 110, 121, 134, 148, 163, 180, 198, 218, 240]},
+    {"name": "March Size 3",     "levels": [225, 248, 273, 301, 332]},
+    {"name": "Gear Attack 1",    "levels": [150, 165, 182, 201, 222, 245, 270, 297, 327]},
+    {"name": "Gear HP 1",        "levels": [150, 165, 182, 201, 222, 245, 270, 297, 327]},
+    {"name": "March Size 4",     "levels": [375, None, 455, 501, 552]},
+    {"name": "Gear Attack 2",    "levels": [175, 193, 213, 235, 259, 285, 314, 346, 381]},
+    {"name": "Gear HP 2",        "levels": [175, 193, 213, 235, 259, 285, 314, 346, 381]},
+    {"name": "Troop Level",      "levels": [800]},
+    {"name": "Anti-Counter 1",   "levels": [300]},
+]
+
 S4_R = [
     {"name": "Full League March (A)", "name_pt": "Marcha Completa de Liga (A)", "levels": [20,22,25,28,31,35,39,43,48,53]},
     {"name": "Full Horde March (A)",  "name_pt": "Marcha Completa de Horda (A)","levels": [20,22,25,28,31,35,39,43,48,53]},
@@ -253,7 +278,7 @@ S4_R = [
 ]
 
 # Convenience groupings
-FACTION_RESEARCH = {"BI": BI_R, "Faccao": FAC_R, "Awakening": AWK_R}
+FACTION_RESEARCH = {"BI": BI_R, "BI2": BI2_R, "Faccao": FAC_R, "Awakening": AWK_R}
 SHARED_RESEARCH  = {"S2": S2_R, "S3": S3_R, "S4": S4_R}
 
 # Tier slices for Faction and Awakening (6 items each)

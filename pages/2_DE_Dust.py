@@ -31,7 +31,7 @@ from de_dust_engine import (
     BI_LEVEL_COSTS,
     de_cost, max_b, castle_prereq_chain, compute_castle_total, bi_de_cost,
     bar_labels, de_cost_bar,
-    BI_R, FAC_R, AWK_R, S2_R, S3_R, S4_R,
+    BI_R, BI2_R, FAC_R, AWK_R, S2_R, S3_R, S4_R,
     RESEARCH_TIER_SLICES,
     research_max_levels, research_cost,
 )
@@ -588,6 +588,7 @@ with tab_main:
 
     res_tabs = st.tabs([
         "🧪 BI",
+        "🧪 BI2",
         "⚔️ " + t("Facção", "Faction"),
         "🐉 Awakening",
         "S2", "S3", "S4",
@@ -648,8 +649,42 @@ with tab_main:
         st.metric(t("Total Pó BI (todas as facções)", "Total Dust BI (all factions)"), f"{bi_res_total:,}")
         res_totals["BI"] = bi_res_total
 
-    # ─── Facção ───────────────────────────────────────────────────────────────────
+    # ─── BI2 ──────────────────────────────────────────────────────────────────────
     with res_tabs[1]:
+        st.caption(t(
+            "⚠️ **BI2 desbloqueia quando BI1 atingir 70% de conclusão (≈ 21 000 Pó).** "
+            "Necessário para tropas T12. Total de pó: **23 711** (por facção).",
+            "⚠️ **BI2 unlocks when BI1 reaches 70% completion (≈ 21 000 Dust).** "
+            "Required for T12 troops. Total dust: **23 711** (per faction).",
+        ))
+        fac_st_bi2 = st.tabs([_FAC_NAMES[f] for f in _FACS])
+        bi2_fac_totals = {}
+        for fi, fac in enumerate(_FACS):
+            with fac_st_bi2[fi]:
+                _b2b1, _b2b2 = st.columns(2)
+                if _b2b1.button(t("↩ Zerar alvos", "↩ Reset targets"), key=f"rst_bi2_{fac}"):
+                    for _idx in range(len(BI2_R)):
+                        st.session_state[f"r_bi2_{fac}_{_idx}_t"] = "0"
+                    st.rerun()
+                if _b2b2.button(t("⬆ Máximo", "⬆ Max"), key=f"max_bi2_{fac}"):
+                    for _idx in range(len(BI2_R)):
+                        st.session_state[f"r_bi2_{fac}_{_idx}_pmx"] = True
+                    st.rerun()
+                fac_total = 0
+                n_label = t("pesquisas", "researches")
+                with st.expander(f"BI2  —  {len(BI2_R)} {n_label}", expanded=True):
+                    _rphdr()
+                    for idx, item in enumerate(BI2_R):
+                        fac_total += _rrow(item, f"r_bi2_{fac}_{idx}")
+                bi2_fac_totals[fac] = fac_total
+                st.metric(_FAC_NAMES[fac] + " — " + t("Pó BI2", "Dust BI2"), f"{fac_total:,}")
+
+        bi2_res_total = sum(bi2_fac_totals.values())
+        st.metric(t("Total Pó BI2 (todas as facções)", "Total Dust BI2 (all factions)"), f"{bi2_res_total:,}")
+        res_totals["BI2"] = bi2_res_total
+
+    # ─── Facção ───────────────────────────────────────────────────────────────────
+    with res_tabs[2]:
         fac_st_fac = st.tabs([_FAC_NAMES[f] for f in _FACS])
         fac_fac_totals = {}
         for fi, fac in enumerate(_FACS):
@@ -681,7 +716,7 @@ with tab_main:
         res_totals[t("Facção", "Faction")] = fac_res_total
 
     # ─── Awakening ────────────────────────────────────────────────────────────────
-    with res_tabs[2]:
+    with res_tabs[3]:
         _ac1, _ac2 = st.columns(2)
         if _ac1.button(t("↩ Zerar alvos Awakening", "↩ Reset Awakening targets"), key="rst_awk"):
             _reset_tree("r_awk_")
@@ -701,7 +736,7 @@ with tab_main:
         res_totals["Awakening"] = awk_total
 
     # ─── S2 ───────────────────────────────────────────────────────────────────────
-    with res_tabs[3]:
+    with res_tabs[4]:
         _s2c1, _s2c2 = st.columns(2)
         if _s2c1.button(t("↩ Zerar alvos S2", "↩ Reset S2 targets"), key="rst_s2"):
             _reset_tree("r_s2_")
@@ -721,7 +756,7 @@ with tab_main:
         res_totals["S2"] = s2_total
 
     # ─── S3 ───────────────────────────────────────────────────────────────────────
-    with res_tabs[4]:
+    with res_tabs[5]:
         _s3c1, _s3c2 = st.columns(2)
         if _s3c1.button(t("↩ Zerar alvos S3", "↩ Reset S3 targets"), key="rst_s3"):
             _reset_tree("r_s3_")
@@ -737,7 +772,7 @@ with tab_main:
         res_totals["S3"] = s3_total
 
     # ─── S4 ───────────────────────────────────────────────────────────────────────
-    with res_tabs[5]:
+    with res_tabs[6]:
         _s4c1, _s4c2 = st.columns(2)
         if _s4c1.button(t("↩ Zerar alvos S4", "↩ Reset S4 targets"), key="rst_s4"):
             _reset_tree("r_s4_")
