@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/7_LordGear.py — Lord Gear & Sacred Codex Calculator.
 """
 
@@ -52,7 +52,7 @@ def _lg_save():
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")

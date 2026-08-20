@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/5_Events.py — Eventos Regulares / Rush Events page.
 """
 
@@ -16,7 +16,7 @@ st.set_page_config(
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")

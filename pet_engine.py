@@ -23,26 +23,29 @@ PETS = [
 ]
 
 PROMO_LIST = [
-    # (min_lvl, label, tier, same_copies_cost, any_copies_cost)
-    (0,   "RARE ☆",          "RARE",      0, 0),
-    (10,  "RARE ★",          "RARE",      1, 0),
-    (20,  "RARE ★★",         "RARE",      0, 3),
-    (30,  "RARE ★★★",        "RARE",      1, 0),
-    (35,  "RARE ★★★★",       "RARE",      0, 3),
-    (40,  "RARE ★★★★★",      "RARE",      1, 5),
-    (45,  "EPIC ☆",          "EPIC",      1, 5),
-    (50,  "EPIC ★",          "EPIC",      2, 5),
-    (55,  "EPIC ★★",         "EPIC",      2, 10),
-    (60,  "EPIC ★★★",        "EPIC",      3, 10),
-    (65,  "EPIC ★★★★",       "EPIC",      3, 15),
-    (70,  "EPIC ★★★★★",      "EPIC",      4, 15),
-    (75,  "LEGENDARY ☆",     "LEGENDARY", 5, 15),
-    (80,  "LEGENDARY ★",     "LEGENDARY", 3, 10),
-    (85,  "LEGENDARY ★★",    "LEGENDARY", 4, 15),
-    (90,  "LEGENDARY ★★★",   "LEGENDARY", 5, 20),
-    (95,  "LEGENDARY ★★★★",  "LEGENDARY", 6, 20),
-    (100, "LEGENDARY ★★★★★", "LEGENDARY", 8, 30),
-    (100, "MYTHIC",          "MYTHIC",    3, 10),
+    # (min_lvl, label, tier, same_copies_cost, any_copies_cost, promo_essence)
+    # Promotions from RARE through LEGENDARY ☆ require no essence.
+    # LEGENDARY ★ and above require promotion essence (separate from level-up essence).
+    # MYTHIC requires level 101 and 10 000 promotion essence.
+    (0,   "RARE ☆",          "RARE",      0, 0,  0),
+    (10,  "RARE ★",          "RARE",      1, 0,  0),
+    (20,  "RARE ★★",         "RARE",      0, 3,  0),
+    (30,  "RARE ★★★",        "RARE",      1, 0,  0),
+    (35,  "RARE ★★★★",       "RARE",      0, 3,  0),
+    (40,  "RARE ★★★★★",      "RARE",      1, 5,  0),
+    (45,  "EPIC ☆",          "EPIC",      1, 5,  0),
+    (50,  "EPIC ★",          "EPIC",      2, 5,  0),
+    (55,  "EPIC ★★",         "EPIC",      2, 10, 0),
+    (60,  "EPIC ★★★",        "EPIC",      3, 10, 0),
+    (65,  "EPIC ★★★★",       "EPIC",      3, 15, 0),
+    (70,  "EPIC ★★★★★",      "EPIC",      4, 15, 0),
+    (75,  "LEGENDARY ☆",     "LEGENDARY", 5, 15, 0),
+    (80,  "LEGENDARY ★",     "LEGENDARY", 3, 10, 1000),
+    (85,  "LEGENDARY ★★",    "LEGENDARY", 4, 15, 2000),
+    (90,  "LEGENDARY ★★★",   "LEGENDARY", 5, 20, 4000),
+    (95,  "LEGENDARY ★★★★",  "LEGENDARY", 6, 20, 6000),
+    (100, "LEGENDARY ★★★★★", "LEGENDARY", 8, 30, 8000),
+    (100, "MYTHIC",          "MYTHIC",    8, 30, 10000),
 ]
 
 RARE_SAME = {10:1, 30:1, 40:1, 45:1, 50:2, 55:2, 60:3, 65:3, 70:4, 75:5,
@@ -51,6 +54,9 @@ RARE_ANY  = {20:3, 35:3, 40:5, 45:5, 50:5, 55:10, 60:10, 65:15, 70:15, 75:15,
              80:10, 85:15, 90:20, 95:20, 100:30}
 
 # (level, cumulative_food, per_level_essence)
+# Per-level essence starts at level 91 (50/level, +50 each level).
+# Levels 1-90 cost no essence to level up.
+# Promotion essence is tracked separately in PROMO_LIST (6th column).
 RARE_ALL = [
     (1,0,0),(2,100,0),(3,250,0),(4,450,0),(5,700,0),(6,1000,0),(7,1400,0),
     (8,1900,0),(9,2500,0),(10,3200,0),(11,4000,0),(12,4900,0),(13,5900,0),
@@ -67,15 +73,15 @@ RARE_ALL = [
     (66,263700,0),(67,274300,0),(68,285150,0),(69,296250,0),(70,307600,0),
     (71,319200,0),(72,331100,0),(73,343300,0),(74,355800,0),(75,368600,0),
     (76,381700,0),(77,395100,0),(78,408800,0),(79,422800,0),
-    (80,437100,1000),(81,451700,1000),(82,466600,1000),(83,481800,1000),(84,497300,1000),
-    (85,513100,3000),(86,529200,3000),(87,545600,3000),(88,562300,3000),(89,579300,3000),
-    (90,596600,7000),
-    (91,602500,7050),(92,608500,7200),(93,614600,7500),(94,620800,8000),
-    (95,627200,14250),
-    (96,633700,14550),(97,640300,14900),(98,647100,15300),(99,654000,15750),
-    (100,661000,24250),
-    (101,668200,24250),(102,675500,24250),(103,682900,24250),(104,690500,24250),
-    (105,698200,24250),(106,706000,24250),(107,714000,24250),
+    (80,437100,0),(81,451700,0),(82,466600,0),(83,481800,0),(84,497300,0),
+    (85,513100,0),(86,529200,0),(87,545600,0),(88,562300,0),(89,579300,0),
+    (90,596600,0),
+    (91,602500,50),(92,608500,100),(93,614600,150),(94,620800,200),
+    (95,627200,250),
+    (96,633700,300),(97,640300,350),(98,647100,400),(99,654000,450),
+    (100,661000,500),
+    (101,668200,600),(102,675500,700),(103,682900,800),(104,690500,900),
+    (105,698200,1000),(106,706000,1100),(107,714000,1200),
 ]
 
 STATS = {
@@ -89,7 +95,7 @@ STATS = {
     50: (0.64, "13.60%", "40.80%", "20.00%", "60.00%", 80),
     55: (0.68, "15.30%", "45.90%", "22.50%", "67.50%", 90),
     60: (0.72, "17.00%", "51.00%", "25.00%", "75.00%", 90),
-    65: (0.76, "18.70%", "56.10%", "27.50%", "82.50%", 90),
+    65: (0.76, "18.70%", "56.10%", "27,50%", "82.50%", 90),
     70: (0.80, "20.40%", "61.20%", "30.00%", "90.00%", 90),
     75: (0.84, "22.10%", "66.30%", "32.50%", "97.50%", 90),
     80: (0.88, "23.80%", "71.40%", "35.00%", "105.00%", 95),
@@ -99,14 +105,15 @@ STATS = {
     100:(1.04, "30.60%", "91.80%", "45.00%", "135.00%", 115),
 }
 
-# Total resources required to reach each tier from scratch
-TIER_TARGETS = {
-    "EPIC":      (98550,   4,  16,     0),
-    "LEGENDARY": (368600, 23,  86,     0),
-    "MYTHIC":    (661000, 52, 191, 33750),
-}
+TIER_RANK  = {"RARE": 0, "EPIC": 1, "LEGENDARY": 2, "MYTHIC": 3}
+PROMO_INDEX = {p[1]: i for i, p in enumerate(PROMO_LIST)}
 
-TIER_RANK = {"RARE": 0, "EPIC": 1, "LEGENDARY": 2, "MYTHIC": 3}
+# Label of the first promotion that counts as "reaching" each broad tier milestone
+TIER_TARGET_PROMO_LABEL = {
+    "EPIC":      "EPIC ☆",
+    "LEGENDARY": "LEGENDARY ☆",
+    "MYTHIC":    "MYTHIC",
+}
 
 FACTION_EMOJI = {"League": "🔵", "Horde": "🔴", "Nature": "🟢"}
 
@@ -121,34 +128,67 @@ for _lvl, _food, _ess in RARE_ALL:
 
 MAX_LEVEL = max(lvl for lvl, _, _ in RARE_ALL)
 
-# Cumulative copies used across all promotions up to and including each promo entry
-_PROMO_CUM: dict[tuple, tuple[int, int]] = {}
-for _min_lvl, _lbl, _tier, _s, _a in PROMO_LIST:
-    cs = sum(RARE_SAME.get(l, 0) for l in range(0, _min_lvl + 1))
-    ca = sum(RARE_ANY.get(l, 0)  for l in range(0, _min_lvl + 1))
-    _PROMO_CUM[(_min_lvl, _lbl)] = (cs, ca)
+TIER_MIN_LEVEL = {
+    tier: min(p[0] for p in PROMO_LIST if p[2] == tier)
+    for tier in set(p[2] for p in PROMO_LIST)
+}
+
+# Cumulative (same_copies, any_copies, promo_essence) up to and including each promotion.
+# Keyed by promotion label. Accumulated in PROMO_LIST order so promotions at the same
+# min_lvl (e.g. LEGENDARY★★★★★ then MYTHIC) stack correctly.
+_PROMO_CUM: dict[str, tuple[int, int, int]] = {}
+_cs_run = _ca_run = _ce_run = 0
+for _min_lvl, _lbl, _tier, _s, _a, _e in PROMO_LIST:
+    _cs_run += _s
+    _ca_run += _a
+    _ce_run += _e
+    _PROMO_CUM[_lbl] = (_cs_run, _ca_run, _ce_run)
 
 
-def promo_cum(promo_min_lvl: int, promo_label: str) -> tuple[int, int]:
-    return _PROMO_CUM.get((promo_min_lvl, promo_label), (0, 0))
+def promo_cum(promo_label: str) -> tuple[int, int, int]:
+    """Cumulative (same_copies, any_copies, promo_essence) up to this promotion."""
+    return _PROMO_CUM.get(promo_label, (0, 0, 0))
 
 
-def calc_milestone(tier: str, current_level: int, promo_min_lvl: int, promo_label: str,
-                   inv_food: int, inv_essence: int,
-                   inv_same_selected: int, total_any: int) -> dict:
-    tgt_food, tgt_same, tgt_any, tgt_ess = TIER_TARGETS[tier]
-    food_spent = FOOD_AT_LEVEL.get(current_level, 0)
-    ess_spent  = ESS_AT_LEVEL.get(current_level, 0)
-    cum_same, cum_any = promo_cum(promo_min_lvl, promo_label)
+def calc_to_promo(target_label: str, current_level: int, current_promo_label: str,
+                  inv_food: int, inv_essence: int, inv_same: int, inv_any: int) -> dict:
+    """Resources needed to reach a specific target promotion from current state."""
+    tgt = next(p for p in PROMO_LIST if p[1] == target_label)
+    tgt_min_lvl = tgt[0]
+
+    tgt_food_cum = FOOD_AT_LEVEL.get(tgt_min_lvl, 0)
+    cur_food_cum = FOOD_AT_LEVEL.get(current_level, 0)
+
+    # Level-up essence: cumulative cost of levels between current and target min level
+    tgt_lvl_ess = ESS_AT_LEVEL.get(tgt_min_lvl, 0)
+    cur_lvl_ess = ESS_AT_LEVEL.get(current_level, 0)
+
+    # Promotion essence: accumulated cost of each individual promotion step
+    tgt_same_cum, tgt_any_cum, tgt_promo_ess_cum = promo_cum(target_label)
+    cur_same_cum, cur_any_cum, cur_promo_ess_cum = promo_cum(current_promo_label)
+
+    same_gross   = tgt_same_cum - cur_same_cum
+    surplus_same = max(0, inv_same - same_gross)   # surplus same copies can count as any
     return {
-        "food":    max(0, tgt_food - food_spent - inv_food),
-        "same":    max(0, tgt_same - cum_same   - inv_same_selected),
-        "any":     max(0, tgt_any  - cum_any    - total_any),
-        "essence": max(0, tgt_ess  - ess_spent  - inv_essence),
+        "food":    max(0, tgt_food_cum - cur_food_cum - inv_food),
+        "essence": max(0, (tgt_lvl_ess - cur_lvl_ess) + (tgt_promo_ess_cum - cur_promo_ess_cum) - inv_essence),
+        "same":    max(0, same_gross - inv_same),
+        "any":     max(0, tgt_any_cum  - cur_any_cum  - inv_any - surplus_same),
+        "min_lvl": tgt_min_lvl,
     }
 
 
+def calc_milestone(tier: str, current_level: int, current_promo_label: str,
+                   inv_food: int, inv_essence: int,
+                   inv_same_selected: int, total_any: int) -> dict:
+    """Resources remaining to reach the entry promotion of a broad tier (EPIC ☆ / LEGENDARY ☆ / MYTHIC)."""
+    target_label = TIER_TARGET_PROMO_LABEL[tier]
+    return calc_to_promo(target_label, current_level, current_promo_label,
+                         inv_food, inv_essence, inv_same_selected, total_any)
+
+
 def calc_to_target(from_lvl: int, to_lvl: int) -> dict:
+    """Resources to level up from from_lvl to to_lvl (ignores promotion essence)."""
     return {
         "food":    max(0, FOOD_AT_LEVEL.get(to_lvl, 0) - FOOD_AT_LEVEL.get(from_lvl, 0)),
         "essence": max(0, ESS_AT_LEVEL.get(to_lvl, 0)  - ESS_AT_LEVEL.get(from_lvl, 0)),

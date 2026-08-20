@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/6_Behemoth.py — Behemoth Calculator & Batch Planner.
 """
 
@@ -49,7 +49,7 @@ def _beh_save():
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")

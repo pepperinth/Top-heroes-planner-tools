@@ -1,4 +1,4 @@
-"""
+﻿"""
 app.py — Top Heroes Tools: home page and global layout.
 Run with:  streamlit run app.py
 """
@@ -16,7 +16,7 @@ st.set_page_config(
 
 # ── Global language selector ───────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")

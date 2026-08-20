@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/9_HeroGear.py — Hero Gear & Promotion Calculator.
 """
 import sys, os
@@ -74,7 +74,7 @@ def _hg_save():
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")

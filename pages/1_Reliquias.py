@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/1_Reliquias.py — Relic Optimizer page.
 """
 
@@ -20,6 +20,49 @@ from ui_utils import inject_global_css, section_header, results_header
 import persistence
 
 st.set_page_config(page_title="Relíquias", page_icon="⚜️", layout="wide")
+
+# ── Test preset ────────────────────────────────────────────────────────────────
+# Inventário atual: Asas P★4 1/5 (17sp), Perseguição usada. 3 martelos, 464u.
+# Estratégia ótima: 1h Amuleto (Asas→Amuleto direto) + 2h Coração boomerang
+# via Bandeira de Guerra → Amuleto P★5 5/5, Coração P★5 1/5.
+_PRESET_RELICS = {
+    "Duke's Signet Ring": ("Y★5", "5/5", 0,   True),
+    "Eternal Wings":      ("P★4", "1/5", 17,  True),
+    "Frost Diadem":       ("Y★4", "3/5", 69,  True),
+    "Royalty":            ("Y★5", "3/5", 76,  True),
+    "War Flag":           ("Y★5", "5/5", 113, True),
+    "Scale of Injustice": ("R★2", "3/5", 0,   True),
+    "Mighty Gold":        ("0★",  "1/5", 0,   True),
+    "Persecution":        ("0★",  "1/5", 0,   False),
+    "Thunder Judgment":   ("P★5", "5/5", 0,   True),
+    "Dragonheart":        ("P★1", "2/5", 0,   True),
+    "Dragonbone Amulet":  ("0★",  "1/5", 117, True),
+}
+
+def _load_preset_callback():
+    _lang = st.session_state.get("lang", "pt")
+    _pt   = _lang == "pt"
+    for r in ALL_RELICS:
+        star, leg, spec, use = _PRESET_RELICS.get(r, ("0★", "1/5", 0, True))
+        st.session_state[f"istar_{r}"] = star
+        st.session_state[f"ileg_{r}"]  = leg
+        st.session_state[f"ispec_{r}"] = spec
+        st.session_state[f"iu_{r}"]    = use
+    _set_map = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza"}
+    st.session_state["cfg_target_set"] = _set_map["Horde"] if _pt else "Horde"
+    st.session_state["cfg_tgt_star"]   = "P★5"
+    st.session_state["cfg_tgt_leg"]    = "5/5"
+    st.session_state["cfg_hammers"]    = 3
+    st.session_state["cfg_univ"]       = 464
+    _rn_cb = lambda r: RELIC_NAME_PT.get(r, r) if _pt else r
+    st.session_state["cfg_inter1"] = _rn_cb("Eternal Wings")
+    st.session_state["cfg_inter2"] = ""
+    _prio_en = ["Dragonbone Amulet", "Dragonheart"]
+    for i, r in enumerate(_prio_en):
+        st.session_state[f"prio_{i}"] = _rn_cb(r)
+    if len(_prio_en) < 3:
+        st.session_state["prio_2"] = ""
+    st.session_state["relic_mode"] = "Set completo" if _pt else "Full set"
 
 # ── Persistence ────────────────────────────────────────────────────────────────
 _cm = persistence.new_manager("relics")
@@ -97,6 +140,9 @@ if "epic_univ_shards" not in st.session_state:
     st.session_state["epic_univ_shards"] = 0
 if "rare_univ_shards" not in st.session_state:
     st.session_state["rare_univ_shards"] = 0
+for _k, _v in [("cfg_hammers", 1), ("cfg_univ", 0)]:
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
 
 
 def _inv_save_all():
@@ -129,7 +175,7 @@ def _rare_save_all():
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")
@@ -145,6 +191,14 @@ with st.sidebar:
         "Inventory saved in your browser."
     ))
     st.divider()
+    _btn_lbl = ("Carregar preset de teste"
+                if st.session_state.get("lang", "pt") == "pt"
+                else "Load test preset")
+    st.button(
+        "🧪 " + _btn_lbl,
+        key="btn_preset", on_click=_load_preset_callback,
+        use_container_width=True,
+    )
     st.page_link("app.py", label="← Home")
 
 lang = st.session_state.lang
@@ -257,8 +311,8 @@ with tab_leg:
             with c1:
                 _SET_PT = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza"}
                 _set_opts = [t(_SET_PT[k], k) for k in SETS.keys()]
-                _set_disp = st.selectbox(t("Conjunto alvo", "Target set"), _set_opts, index=0)
-                target_set = {"Liga": "League", "Horda": "Horde", "Natureza": "Nature"}.get(_set_disp, _set_disp)
+                _set_disp = st.selectbox(t("Conjunto alvo", "Target set"), _set_opts, index=0, key="cfg_target_set")
+                target_set = {"Liga": "League", "Horda": "Horde", "Natureza": "Nature", "League": "League", "Horde": "Horde", "Nature": "Nature"}.get(_set_disp, _set_disp)
                 _set_img_cols = st.columns(3)
                 for _si, _sr in enumerate(SETS[target_set]):
                     _p = _load_portrait(_sr)
@@ -266,16 +320,16 @@ with tab_leg:
                         with _set_img_cols[_si]: st.image(_p, width=28)
             with c2:
                 tgt_star = st.selectbox(t("Estrela alvo", "Target star"), STAR_OPTIONS[1:], index=0,
-                                        format_func=lambda x: _star_fmt.get(x, x))
-                tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, index=0)
+                                        format_func=lambda x: _star_fmt.get(x, x), key="cfg_tgt_star")
+                tgt_leg  = st.selectbox(t("Perna alvo", "Target leg"), LEG_OPTIONS, index=0, key="cfg_tgt_leg")
                 _show_relic_star(tgt_star, tgt_leg)
             with c3:
-                hammers  = st.number_input(t("Martelos Milagrosos", "Miracle Hammers"), min_value=1, max_value=30, value=1)
-                univ     = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, value=0, step=10)
+                hammers  = st.number_input(t("Martelos Milagrosos", "Miracle Hammers"), min_value=1, max_value=30, key="cfg_hammers")
+                univ     = st.number_input(t("Fragmentos universais", "Universal shards"), min_value=0, step=10, key="cfg_univ")
             with c4:
                 _univ_disp = [_rn(r) for r in UNIVERSAL_RELICS]
-                inter1_d = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), _univ_disp, index=0)
-                inter2_d = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + _univ_disp, index=0)
+                inter1_d = st.selectbox(t("Relay 1 (obrigatório)", "Relay 1 (mandatory)"), _univ_disp, index=0, key="cfg_inter1")
+                inter2_d = st.selectbox(t("Relay 2 (obrigatório)", "Relay 2 (mandatory)"), ["—"] + _univ_disp, index=0, key="cfg_inter2")
                 inter1     = _rn_en(inter1_d)
                 inter2_val = _rn_en(inter2_d) if inter2_d != "—" else ""
 
@@ -501,11 +555,11 @@ with tab_leg:
             if opt:
                 _opt_is_sub = opt.get("_is_sub", False)
                 if _opt_is_sub:
-                    _exp_label = t("🏆 Resultado ótimo (sem restrições do usuário)",
-                                   "🏆 Optimal result (no user constraints)")
+                    _exp_label = t("🏆 Resultado ótimo (sem relays obrigatórios, mesma priorização)",
+                                   "🏆 Optimal result (no mandatory relays, same priority)")
                 else:
-                    _exp_label = t("📊 Referência sem restrições do usuário",
-                                   "📊 Reference: no user constraints")
+                    _exp_label = t("📊 Referência sem relays obrigatórios (mesma priorização)",
+                                   "📊 Reference: no mandatory relays, same priority")
                 with st.expander(_exp_label):
                     # Per-target summary for optimal
                     opt_rows = []

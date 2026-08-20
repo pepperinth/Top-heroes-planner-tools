@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/2_DE_Dust.py — DE & Dust Planner page.
 """
 
@@ -60,7 +60,7 @@ def _dedust_save():
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")

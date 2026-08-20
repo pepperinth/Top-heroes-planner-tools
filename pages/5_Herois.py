@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/5_Herois.py — Hero Calculator page.
 """
 
@@ -49,7 +49,7 @@ def _heroes_save():
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")

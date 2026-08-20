@@ -1,4 +1,4 @@
-"""
+﻿"""
 pages/4_Troop_Skins.py — Troop Skin Calculator page.
 """
 
@@ -17,7 +17,7 @@ _cm = persistence.new_manager("skins")
 
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
-    st.session_state.lang = "pt"
+    st.session_state.lang = "en"
 
 with st.sidebar:
     st.markdown("### 🌐 Idioma / Language")
