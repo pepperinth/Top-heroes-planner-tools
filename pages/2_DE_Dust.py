@@ -1055,22 +1055,110 @@ Use **"Mark all to max"** to select all maximum levels at once.
         ))
 
     with _hi2:
-        st.subheader(t("🏗️ Custo por Nível (Construções)", "🏗️ Building Cost per Level"))
-        st.caption(t(
-            "Custo em DE para avançar um nível em cada tipo de construção.",
-            "DE cost to advance one level for each building type.",
-        ))
+        # ── Construções ───────────────────────────────────────────────────────
+        st.subheader(t("🏗️ Construções — Custo em DE", "🏗️ Buildings — DE Cost"))
+
+        _fac_opts_lbl = [
+            t("Todas",   "All"),
+            t("Comuns",  "Common"),
+            "⚔️ " + t("Liga",     "League"),
+            "🔥 " + t("Horda",    "Horde"),
+            "🌿 " + t("Natureza", "Nature"),
+        ]
+        _fac_opts_val = [None, "all", "league", "horde", "nature"]
+        _fac_pick_idx = st.radio(
+            t("Filtrar por facção", "Filter by faction"),
+            range(len(_fac_opts_lbl)),
+            format_func=lambda i: _fac_opts_lbl[i],
+            horizontal=True,
+            key="ref_bld_fac",
+        )
+        _fac_val = _fac_opts_val[_fac_pick_idx]
+
         _b_rows = []
         for _bk, _bdata in BUILDINGS.items():
+            if _fac_val is not None and _bdata["faction"] != _fac_val:
+                continue
+            _bname = _bdata["pt"] if lang == "pt" else _bdata["en"]
+            _fname = FACTION_LABEL[_bdata["faction"]]["pt" if lang == "pt" else "en"]
+            row = {
+                t("Construção", "Building"): _bname,
+                t("Facção",     "Faction"):  _fname,
+            }
             for _lv in range(1, 7):
-                _cost = de_cost_bar(_bk, _lv - 1, _lv)
-                if _cost > 0:
-                    _b_rows.append({
-                        t("Construção", "Building"): _bk,
-                        t("Nível", "Level"): f"B{_lv-1} → B{_lv}",
-                        "DE": f"{_cost:,}",
-                    })
+                _cost = de_cost(_bk, _lv - 1, _lv)
+                row[f"B{_lv-1}→B{_lv}"] = f"{_cost:,}" if _cost > 0 else "—"
+            _b_rows.append(row)
+
         if _b_rows:
-            import pandas as _pd2
-            st.dataframe(_pd2.DataFrame(_b_rows), use_container_width=True, hide_index=True, height=300)
+            st.dataframe(pd.DataFrame(_b_rows), use_container_width=True, hide_index=True)
+
+        st.divider()
+
+        # ── Pesquisas ─────────────────────────────────────────────────────────
+        st.subheader(t("📜 Pesquisas — Custo em Pó", "📜 Research — Dust Cost"))
+
+        def _res_ref_table(items, bi_req=False, tier=False):
+            max_lv = max(len([x for x in r["levels"] if x is not None]) for r in items)
+            rows = []
+            for item in items:
+                name = item.get("name_pt", item["name"]) if lang == "pt" else item["name"]
+                row = {t("Pesquisa", "Research"): name}
+                if bi_req:
+                    row["BI Req"] = item.get("biReq", "—")
+                if tier:
+                    row[t("Tier", "Tier")] = item.get("_tier", "—")
+                valid = [x for x in item["levels"] if x is not None]
+                for i, c in enumerate(valid):
+                    row[f"Lv{i+1}"] = c
+                for i in range(len(valid), max_lv):
+                    row[f"Lv{i+1}"] = None
+                row[t("Total", "Total")] = sum(valid)
+                rows.append(row)
+            return pd.DataFrame(rows)
+
+        def _with_tier(research_list):
+            out = []
+            for slc, tlabel in RESEARCH_TIER_SLICES:
+                for item in research_list[slc]:
+                    out.append({**item, "_tier": tlabel})
+            return out
+
+        _ref_rtabs = st.tabs([
+            "🧪 BI", "🧪 BI2",
+            "⚔️ " + t("Facção", "Faction"),
+            "🐉 Awakening",
+            "S2", "S3", "S4",
+        ])
+
+        with _ref_rtabs[0]:
+            st.caption(t("Custo por facção (×3 no total).", "Cost per faction (×3 total)."))
+            st.dataframe(_res_ref_table(BI_R, bi_req=True), use_container_width=True, hide_index=True)
+
+        with _ref_rtabs[1]:
+            st.caption(t(
+                "Desbloqueia quando BI1 ≥ 70% (≈ 21 000 Pó). Custo por facção (×3 no total).",
+                "Unlocks when BI1 ≥ 70% (≈ 21 000 Dust). Cost per faction (×3 total).",
+            ))
+            st.dataframe(_res_ref_table(BI2_R), use_container_width=True, hide_index=True)
+
+        with _ref_rtabs[2]:
+            st.caption(t("Custo por facção (×3 no total).", "Cost per faction (×3 total)."))
+            st.dataframe(_res_ref_table(_with_tier(FAC_R), tier=True), use_container_width=True, hide_index=True)
+
+        with _ref_rtabs[3]:
+            st.caption(t("Árvore única compartilhada.", "Single shared tree."))
+            st.dataframe(_res_ref_table(_with_tier(AWK_R), tier=True), use_container_width=True, hide_index=True)
+
+        with _ref_rtabs[4]:
+            st.caption(t("Árvore compartilhada. Alguns níveis com custo desconhecido.", "Shared tree. Some levels have unknown costs."))
+            st.dataframe(_res_ref_table(S2_R), use_container_width=True, hide_index=True)
+
+        with _ref_rtabs[5]:
+            st.caption(t("Árvore compartilhada.", "Shared tree."))
+            st.dataframe(_res_ref_table(S3_R), use_container_width=True, hide_index=True)
+
+        with _ref_rtabs[6]:
+            st.caption(t("Árvore compartilhada.", "Shared tree."))
+            st.dataframe(_res_ref_table(S4_R), use_container_width=True, hide_index=True)
 
