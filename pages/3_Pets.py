@@ -11,7 +11,7 @@ from pet_engine import (
     PETS, PET_FLAGS, PROMO_LIST, TIER_RANK, PROMO_INDEX, FACTION_EMOJI,
     MAX_LEVEL, TIER_MIN_LEVEL, TIER_TARGET_PROMO_LABEL,
     FOOD_AT_LEVEL, ESS_AT_LEVEL, promo_cum,
-    calc_milestone, calc_to_target, calc_to_promo, max_level_with_food, get_stats,
+    calc_milestone, calc_to_promo, max_level_with_food, get_stats,
     calc_rebirth, REBIRTH_BOX_PETS,
 )
 from events_data import EVENTS, get_milestone_status
@@ -43,6 +43,7 @@ if "pet_initialized" not in st.session_state:
         st.session_state["pet_food"]       = int(_saved.get("pet_food", 0))
         st.session_state["pet_ess"]        = int(_saved.get("pet_ess", 0))
         st.session_state["pet_box"]        = int(_saved.get("pet_box", 0))
+        st.session_state["pet_rand_boxes"] = int(_saved.get("pet_rand_boxes", 0))
         st.session_state["inv_common_pet"] = int(_saved.get("inv_common_pet", 0))
         if "pet_plan" in _saved:
             st.session_state["pet_plan"] = _saved["pet_plan"]
@@ -56,6 +57,7 @@ def _pets_save():
         "pet_food":       st.session_state.get("pet_food", 0),
         "pet_ess":        st.session_state.get("pet_ess", 0),
         "pet_box":        st.session_state.get("pet_box", 0),
+        "pet_rand_boxes": st.session_state.get("pet_rand_boxes", 0),
         "inv_common_pet": st.session_state.get("inv_common_pet", 0),
         "pet_plan":       st.session_state.get("pet_plan", []),
         "pet_inv_table":  st.session_state.get("pet_inv_table", {}),
@@ -113,7 +115,7 @@ st.caption(t(
 
 # ── RECURSOS (compartilhado entre abas) ───────────────────────────────────────
 st.subheader("📦 " + t("Recursos", "Resources"))
-rc1, rc2, rc3, rc4 = st.columns(4)
+rc1, rc2, rc3, rc4, rc5 = st.columns(5)
 with rc1:
     inv_food = st.number_input(t("🍗 Ração de Pet", "🍗 Pet Food"),
                                 min_value=0, value=0, step=1000, key="pet_food",
@@ -123,10 +125,24 @@ with rc2:
                                min_value=0, value=0, step=100, key="pet_ess",
                                on_change=_pets_save)
 with rc3:
-    inv_box = st.number_input(t("🎁 Caixa de Pet Raro (escolha)", "🎁 Rare Pet Choice Box"),
+    inv_box = st.number_input(t("🎁 Caixa de Escolha (raro)", "🎁 Rare Choice Box"),
                                min_value=0, value=0, step=1, key="pet_box",
-                               on_change=_pets_save)
+                               on_change=_pets_save,
+                               help=t("Caixa de escolha — você escolhe qual pet raro.",
+                                      "Choice box — you pick which rare pet."))
 with rc4:
+    inv_rand_boxes = st.number_input(
+        t("🎲 Caixa Aleatória (raro)", "🎲 Rare Random Box"),
+        min_value=0, value=0, step=1, key="pet_rand_boxes",
+        on_change=_pets_save,
+        help=t(
+            f"Caixa aleatória de pet raro — pode dar: {', '.join(['Eggy','Zappy','Cubbly','Howli'])}. "
+            "Conta como 'qualquer' já que o pet é desconhecido antes de abrir.",
+            f"Random rare pet box — can give: {', '.join(['Eggy','Zappy','Cubbly','Howli'])}. "
+            "Counted as 'any' since the pet inside is unknown until opened.",
+        ),
+    )
+with rc5:
     inv_common = st.number_input(
         t("🐾 Pets Comuns", "🐾 Common Pets"),
         min_value=0, value=0, step=1, key="inv_common_pet",
@@ -185,10 +201,10 @@ _safe_exc = edited_inv[_col_exc].fillna(False)
 inv_copies  = {PETS[i][0]: int(_safe_cop.iloc[i])  for i in range(len(PETS))}
 inv_exclude = {PETS[i][0]: bool(_safe_exc.iloc[i]) for i in range(len(PETS))}
 
-# Total "any" disponível (sem exclusões + choice boxes)
+# Total "any" disponível (sem exclusões + choice boxes + random boxes)
 total_any_inv = sum(
     inv_copies[name] for name, *_ in PETS if not inv_exclude[name]
-) + inv_box
+) + inv_box + inv_rand_boxes
 
 # ── ABAS ───────────────────────────────────────────────────────────────────────
 st.divider()
@@ -223,7 +239,7 @@ with tab_calc:
 
     _higher_promos = [p[1] for p in PROMO_LIST
                       if PROMO_INDEX[p[1]] > PROMO_INDEX[current_promo_lbl]]
-    _tpr_col, _ = st.columns([2, 4])
+    _tpr_col, _tlvl_col, _ = st.columns([2, 1, 3])
     with _tpr_col:
         if _higher_promos:
             target_promo_lbl = st.selectbox(
@@ -234,6 +250,12 @@ with tab_calc:
         else:
             target_promo_lbl = None
             st.success(t("✅ Promoção máxima alcançada!", "✅ Maximum promotion reached!"))
+    with _tlvl_col:
+        calc_tgt_lvl = st.number_input(
+            t("🎯 Nível alvo", "🎯 Target level"),
+            min_value=1, max_value=MAX_LEVEL,
+            value=max(current_level, 1), key="calc_tgt_lvl",
+        )
 
     promo_min_lvl, _, promo_tier, _, _, _ = promo_data[current_promo_lbl]
     promo_rank = TIER_RANK[promo_tier]
@@ -254,13 +276,13 @@ with tab_calc:
         inv_same_selected = 0
         total_any = sum(
             inv_copies[name] for name, *_ in PETS if not inv_exclude[name]
-        )  # includes selected pet itself — all count as any
+        ) + inv_rand_boxes  # includes selected pet itself + random boxes (unknown pet)
     else:
         inv_same_selected = inv_copies[selected_pet] + (inv_box if use_boxes else 0)
         total_any = sum(
             inv_copies[name] for name, *_ in PETS
             if name != selected_pet and not inv_exclude[name]
-        )
+        ) + inv_rand_boxes  # random boxes = unknown pet = always counts as any
 
     ic1, ic2 = st.columns([1, 3])
     with ic1:
@@ -303,11 +325,13 @@ with tab_calc:
         st.markdown("---")
         _tgt_entry = next(p for p in PROMO_LIST if p[1] == target_promo_lbl)
         _tgt_fc = FACTION_COLORS.get(_FACTION_KEY.get(pet_faction, "Liga"), "#5C3D1E")
+        _effective_tgt_lvl = max(_tgt_entry[0], calc_tgt_lvl)
         st.markdown(
             f'<div style="border-left:5px solid {_tgt_fc};padding:5px 14px;'
             f'border-radius:0 8px 8px 0;background:{_tgt_fc}14;font-weight:700;margin:8px 0 6px;">'
             f'🎯 {t("Recursos para atingir", "Resources to reach")} {tpromo(target_promo_lbl)} '
-            f'({t("nível mín.", "min. level")} {_tgt_entry[0]})</div>',
+            f'· {t("lv", "lv")} {_effective_tgt_lvl}'
+            f' ({t("mín. promoção: lv", "promo min.: lv")} {_tgt_entry[0]})</div>',
             unsafe_allow_html=True,
         )
         _res_promo = calc_to_promo(
@@ -315,8 +339,11 @@ with tab_calc:
             inv_food, inv_ess, inv_same_selected, total_any,
             any_promo=_any_promo,
         )
+        # Override food with the effective target level (may be higher than promo minimum)
+        _food_to_tgt = max(0, FOOD_AT_LEVEL.get(_effective_tgt_lvl, 0)
+                              - FOOD_AT_LEVEL.get(current_level, 0) - inv_food)
         _pm1, _pm2, _pm3, _pm4 = st.columns(4)
-        _pm1.metric(t("🍗 Comida", "🍗 Food"),          f"{_res_promo['food']:,}")
+        _pm1.metric(t("🍗 Comida", "🍗 Food"),          f"{_food_to_tgt:,}")
         _pm2.metric(t("💎 Essência", "💎 Essence"),       f"{_res_promo['essence']:,}" if _res_promo['essence'] else "—")
         _pm3.metric(f"📦 {selected_pet}",                f"{_res_promo['same']:,}"    if _res_promo['same']    else "—")
         _pm4.metric(t("🎲 Qualquer pet", "🎲 Any pet"),  f"{_res_promo['any']:,}"     if _res_promo['any']     else "—")
@@ -460,27 +487,6 @@ with tab_calc:
                             f"ℹ️ {surplus_same} {selected_pet} excedentes contados como any.",
                             f"ℹ️ {surplus_same} surplus {selected_pet} counted as any.",
                         ))
-
-    st.markdown("---")
-    st.markdown("**🎯 " + t("Nível alvo (opcional)", "Target level (optional)") + "**")
-    tgt_col, _ = st.columns([1, 3])
-    with tgt_col:
-        target_level = st.number_input(
-            t("Nível alvo", "Target level"),
-            min_value=1, max_value=MAX_LEVEL,
-            value=min(current_level + 10, MAX_LEVEL),
-            key="calc_tgt",
-        )
-
-    if target_level > current_level:
-        res = calc_to_target(current_level, target_level)
-        tm1, tm2, tm3, tm4 = st.columns(4)
-        tm1.metric(t("🍗 Comida",      "🍗 Food"),     f"{res['food']:,}")
-        tm2.metric(t("💎 Essência",    "💎 Essence"),   f"{res['essence']:,}" if res["essence"] else "—")
-        tm3.metric(f"📦 {selected_pet}",                f"{res['same']:,}"    if res["same"]    else "—")
-        tm4.metric(t("🎲 Qualquer pet","🎲 Any pet"),   f"{res['any']:,}"     if res["any"]     else "—")
-    elif target_level == current_level:
-        st.info(t("Selecione um nível alvo maior que o atual.", "Select a target level higher than current."))
 
     with st.expander(t("📊 Estatísticas no nível atual", "📊 Stats at current level")):
         conv, atku, atkf, hpu, hpf, lcap = get_stats(current_level)
