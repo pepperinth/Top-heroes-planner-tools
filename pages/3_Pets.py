@@ -64,6 +64,33 @@ def _pets_save():
     })
 
 
+def _rebirth_add_to_inv():
+    """Callback — runs before next render so widget state can be modified."""
+    _rb_pet   = st.session_state.get("rb_pet", "")
+    _rb_promo = st.session_state.get("rb_promo", "")
+    _rb_lvl   = int(st.session_state.get("rb_lvl", 1))
+    _rb_data  = calc_rebirth(_rb_lvl, _rb_promo)
+
+    _lang = st.session_state.get("lang", "en")
+    _col  = "Cópias" if _lang == "pt" else "Copies"
+
+    _rb_idx = next(i for i, p in enumerate(PETS) if p[0] == _rb_pet)
+    _inv_st = dict(st.session_state.get("pet_inv_table") or {})
+    _erows  = dict(_inv_st.get("edited_rows") or {})
+    _k      = str(_rb_idx)
+    _row    = dict(_erows.get(_k) or _erows.get(_rb_idx) or {})
+    _row[_col] = int(_row.get(_col, 0)) + _rb_data["same_copies"]
+    _erows[_k] = _row
+    _inv_st["edited_rows"] = _erows
+    st.session_state["pet_inv_table"]  = _inv_st
+    st.session_state["pet_rand_boxes"] = int(st.session_state.get("pet_rand_boxes", 0)) + _rb_data["any_boxes"]
+    st.session_state["_rb_add_done"]   = (
+        f"+{_rb_data['same_copies']} {_rb_pet} / +{_rb_data['any_boxes']} "
+        + ("caixa(s) aleatória(s)" if _lang == "pt" else "random box(es)")
+    )
+    _pets_save()
+
+
 # ── Language ───────────────────────────────────────────────────────────────────
 if "lang" not in st.session_state:
     st.session_state.lang = "en"
@@ -847,32 +874,21 @@ with tab_rebirth:
                        "Half of level-up + promotion essence"))
 
     # ── Adicionar ao inventário ──────────────────────────────────────────────
-    _rb_add_label = t("📦 Adicionar ao inventário", "📦 Add to inventory")
-    _rb_add_help  = t(
-        f"Soma {rb['same_copies']} cópia(s) de {rb_pet} ao inventário "
-        f"e {rb['any_boxes']} caixa(s) aleatória(s).",
-        f"Adds {rb['same_copies']} {rb_pet} copy/copies to inventory "
-        f"and {rb['any_boxes']} random box(es).",
+    st.button(
+        t("📦 Adicionar ao inventário", "📦 Add to inventory"),
+        key="rb_add_inv",
+        on_click=_rebirth_add_to_inv,
+        help=t(
+            f"Soma {rb['same_copies']} cópia(s) de {rb_pet} ao inventário "
+            f"e {rb['any_boxes']} caixa(s) aleatória(s).",
+            f"Adds {rb['same_copies']} {rb_pet} copy/copies to inventory "
+            f"and {rb['any_boxes']} random box(es).",
+        ),
     )
-    if st.button(_rb_add_label, key="rb_add_inv", help=_rb_add_help):
-        _rb_pet_idx = next(i for i, p in enumerate(PETS) if p[0] == rb_pet)
-        _inv_st = st.session_state.get("pet_inv_table", {})
-        if not isinstance(_inv_st, dict):
-            _inv_st = {}
-        _erows = _inv_st.get("edited_rows", {})
-        # Use str key — JSON round-trip converts int keys to str
-        _k = str(_rb_pet_idx)
-        _cur = int((_erows.get(_k) or _erows.get(_rb_pet_idx) or {}).get(_col_cop, inv_copies.get(rb_pet, 0)))
-        _erows[_k] = {**(_erows.get(_k) or _erows.get(_rb_pet_idx) or {}), _col_cop: _cur + rb["same_copies"]}
-        _inv_st["edited_rows"] = _erows
-        st.session_state["pet_inv_table"] = _inv_st
-        st.session_state["pet_rand_boxes"] = int(st.session_state.get("pet_rand_boxes", 0)) + rb["any_boxes"]
-        _pets_save()
-        st.success(t(
-            f"✅ +{rb['same_copies']} {rb_pet} e +{rb['any_boxes']} caixa(s) aleatória(s) adicionados ao inventário.",
-            f"✅ +{rb['same_copies']} {rb_pet} and +{rb['any_boxes']} random box(es) added to inventory.",
-        ))
-        st.rerun()
+    if st.session_state.get("_rb_add_done"):
+        _rb_msg = st.session_state["_rb_add_done"]
+        del st.session_state["_rb_add_done"]
+        st.success("✅ " + _rb_msg + t(" adicionados ao inventário.", " added to inventory."))
 
     st.divider()
 
