@@ -846,6 +846,34 @@ with tab_rebirth:
                 help=t("Metade da essência de nível + essência de promoção",
                        "Half of level-up + promotion essence"))
 
+    # ── Adicionar ao inventário ──────────────────────────────────────────────
+    _rb_add_label = t("📦 Adicionar ao inventário", "📦 Add to inventory")
+    _rb_add_help  = t(
+        f"Soma {rb['same_copies']} cópia(s) de {rb_pet} ao inventário "
+        f"e {rb['any_boxes']} caixa(s) aleatória(s).",
+        f"Adds {rb['same_copies']} {rb_pet} copy/copies to inventory "
+        f"and {rb['any_boxes']} random box(es).",
+    )
+    if st.button(_rb_add_label, key="rb_add_inv", help=_rb_add_help):
+        _rb_pet_idx = next(i for i, p in enumerate(PETS) if p[0] == rb_pet)
+        _inv_st = st.session_state.get("pet_inv_table", {})
+        if not isinstance(_inv_st, dict):
+            _inv_st = {}
+        _erows = _inv_st.get("edited_rows", {})
+        # Use str key — JSON round-trip converts int keys to str
+        _k = str(_rb_pet_idx)
+        _cur = int((_erows.get(_k) or _erows.get(_rb_pet_idx) or {}).get(_col_cop, inv_copies.get(rb_pet, 0)))
+        _erows[_k] = {**(_erows.get(_k) or _erows.get(_rb_pet_idx) or {}), _col_cop: _cur + rb["same_copies"]}
+        _inv_st["edited_rows"] = _erows
+        st.session_state["pet_inv_table"] = _inv_st
+        st.session_state["pet_rand_boxes"] = int(st.session_state.get("pet_rand_boxes", 0)) + rb["any_boxes"]
+        _pets_save()
+        st.success(t(
+            f"✅ +{rb['same_copies']} {rb_pet} e +{rb['any_boxes']} caixa(s) aleatória(s) adicionados ao inventário.",
+            f"✅ +{rb['same_copies']} {rb_pet} and +{rb['any_boxes']} random box(es) added to inventory.",
+        ))
+        st.rerun()
+
     st.divider()
 
     # ── Impacto no evento ────────────────────────────────────────────────────
