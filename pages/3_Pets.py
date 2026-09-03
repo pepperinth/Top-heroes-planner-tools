@@ -65,23 +65,24 @@ def _pets_save():
 
 
 def _rebirth_add_to_inv():
-    """Callback: accumulates rebirth returns in separate keys (data_editor is immutable via session state)."""
+    """Callback: accumulates rebirth returns in a list (data_editor is immutable via session state)."""
     _rb_pet   = st.session_state.get("rb_pet", "")
     _rb_promo = st.session_state.get("rb_promo", "")
     _rb_lvl   = int(st.session_state.get("rb_lvl", 1))
     _rb_data  = calc_rebirth(_rb_lvl, _rb_promo)
     _lang     = st.session_state.get("lang", "en")
 
-    extras = dict(st.session_state.get("_extra_copies", {}))
-    extras[_rb_pet] = extras.get(_rb_pet, 0) + _rb_data["same_copies"]
-    st.session_state["_extra_copies"]    = extras
-    st.session_state["_extra_rand_boxes"] = (
-        int(st.session_state.get("_extra_rand_boxes", 0)) + _rb_data["any_boxes"]
-    )
+    _lst = list(st.session_state.get("_rb_extra_list", []))
+    _lst.append([_rb_pet, int(_rb_data["same_copies"]), int(_rb_data["any_boxes"])])
+    st.session_state["_rb_extra_list"] = _lst
     st.session_state["_rb_add_done"] = (
         f"+{_rb_data['same_copies']} {_rb_pet} / +{_rb_data['any_boxes']} "
         + ("caixa(s) aleatória(s)" if _lang == "pt" else "random box(es)")
     )
+
+
+def _rebirth_clear_inv():
+    st.session_state.pop("_rb_extra_list", None)
 
 
 # ── Language ───────────────────────────────────────────────────────────────────
@@ -221,23 +222,29 @@ _safe_exc = edited_inv[_col_exc].fillna(False)
 inv_copies  = {PETS[i][0]: int(_safe_cop.iloc[i])  for i in range(len(PETS))}
 inv_exclude = {PETS[i][0]: bool(_safe_exc.iloc[i]) for i in range(len(PETS))}
 
-# Merge rebirth accumulators (data_editor state is immutable via session_state)
-_extra_copies    = st.session_state.get("_extra_copies", {})
-_extra_rand_boxes = int(st.session_state.get("_extra_rand_boxes", 0))
-if _extra_copies or _extra_rand_boxes:
-    inv_copies = {name: count + _extra_copies.get(name, 0) for name, count in inv_copies.items()}
-    inv_rand_boxes = inv_rand_boxes + _extra_rand_boxes
-    _extras_lbl = ", ".join(f"+{v} {k}" for k, v in _extra_copies.items() if v)
-    if _extra_rand_boxes:
-        _extras_lbl += f", +{_extra_rand_boxes} " + t("caixa(s) aleatória(s)", "random box(es)")
-    _rb_clear_col, _rb_lbl_col = st.columns([1, 5])
+# Merge rebirth planning additions (data_editor is immutable via session_state)
+_rb_extra_list = st.session_state.get("_rb_extra_list", [])
+if _rb_extra_list:
+    _extra_same_totals: dict[str, int] = {}
+    _extra_rand_total = 0
+    for _rbe in _rb_extra_list:
+        _rbe_pet, _rbe_same, _rbe_rand = str(_rbe[0]), int(_rbe[1]), int(_rbe[2])
+        _extra_same_totals[_rbe_pet] = _extra_same_totals.get(_rbe_pet, 0) + _rbe_same
+        _extra_rand_total += _rbe_rand
+    for _rbe_pet, _rbe_same in _extra_same_totals.items():
+        if _rbe_pet in inv_copies:
+            inv_copies[_rbe_pet] += _rbe_same
+    inv_rand_boxes += _extra_rand_total
+    _extras_parts = [f"+{v} {k}" for k, v in _extra_same_totals.items()]
+    if _extra_rand_total:
+        _extras_parts.append(f"+{_extra_rand_total} " + t("caixa(s) aleatória(s)", "random box(es)"))
+    _rb_lbl_col, _rb_clear_col = st.columns([5, 1])
     with _rb_lbl_col:
-        st.caption("🔄 " + t("Planejamento de renascimento incluído:", "Rebirth planning included:") + f" {_extras_lbl}")
+        st.caption("🔄 " + t("Planejamento de renascimento incluído:", "Rebirth planning included:")
+                   + " " + ", ".join(_extras_parts))
     with _rb_clear_col:
-        if st.button(t("❌ Limpar", "❌ Clear"), key="rb_clear_extras"):
-            del st.session_state["_extra_copies"]
-            del st.session_state["_extra_rand_boxes"]
-            st.rerun()
+        st.button(t("❌ Limpar", "❌ Clear"), key="rb_clear_extras",
+                  on_click=_rebirth_clear_inv)
 
 # Total "any" disponível (sem exclusões + choice boxes + random boxes)
 total_any_inv = sum(
