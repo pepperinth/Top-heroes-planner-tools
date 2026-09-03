@@ -607,7 +607,7 @@ with tab_plan:
 
     # ── Formulário de entrada ──────────────────────────────────────────────────
     st.markdown("**➕ " + t("Adicionar pet ao plano", "Add pet to plan") + "**")
-    bp1, bp2, bp3, bp4 = st.columns([2, 2, 1, 1])
+    bp1, bp2, bp3, bp4, bp5 = st.columns([2, 2, 1, 1, 1])
     with bp1:
         bp_pet = st.selectbox(t("Pet", "Pet"), pet_names, key="bp_pet")
     with bp2:
@@ -618,6 +618,8 @@ with tab_plan:
     with bp4:
         bp_tier = st.selectbox(t("Promoção alvo", "Target promotion"),
                                 promo_labels, key="bp_tier", format_func=tpromo)
+    with bp5:
+        bp_tgt_lvl = st.number_input(t("Nível alvo", "Target level"), 1, MAX_LEVEL, 1, key="bp_tgt_lvl")
 
     if st.button("➕ " + t("Adicionar", "Add"), key="bp_add"):
         if PROMO_INDEX[bp_tier] <= PROMO_INDEX[bp_promo]:
@@ -627,12 +629,15 @@ with tab_plan:
             ))
         else:
             ms = calc_to_promo(bp_tier, bp_lvl, bp_promo, 0, 0, 0, 0)
+            effective_tgt_lvl = max(bp_tgt_lvl, ms["min_lvl"])
+            bp_food = max(0, FOOD_AT_LEVEL.get(effective_tgt_lvl, 0) - FOOD_AT_LEVEL.get(bp_lvl, 0))
             st.session_state["pet_plan"].append({
                 "pet":    bp_pet,
                 "promo":  bp_promo,
                 "cur_lv": bp_lvl,
                 "target": bp_tier,
-                "food":    ms["food"],
+                "tgt_lv": effective_tgt_lvl,
+                "food":    bp_food,
                 "same":    ms["same"],
                 "any":     ms["any"],
                 "essence": ms["essence"],
@@ -650,14 +655,15 @@ with tab_plan:
         _cp = t("Pet", "Pet")
         _cr = t("Promoção", "Promo")
         _cl = t("Nível", "Lvl")
-        _ct = t("Alvo", "Target")
+        _ct = t("Promo alvo", "Target Promo")
+        _ctl = t("Nível alvo", "Target Lvl")
         _cf = "🍗 " + t("Comida", "Food")
         _cs = "📦 " + t("Cópias", "Copies")
         _ca = "🎲 " + t("Qualquer", "Any")
         _ce = "💎 " + t("Essência", "Essence")
 
         rows = [{_cp: e["pet"], _cr: tpromo(e["promo"]), _cl: e["cur_lv"],
-                 _ct: tpromo(e["target"]),
+                 _ct: tpromo(e["target"]), _ctl: e.get("tgt_lv", "—"),
                  _cf: e["food"], _cs: e["same"], _ca: e["any"], _ce: e["essence"]}
                 for e in plan]
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
