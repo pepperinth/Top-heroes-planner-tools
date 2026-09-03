@@ -12,6 +12,7 @@ from pet_engine import (
     MAX_LEVEL, TIER_MIN_LEVEL, TIER_TARGET_PROMO_LABEL,
     FOOD_AT_LEVEL, ESS_AT_LEVEL, promo_cum,
     calc_milestone, calc_to_target, calc_to_promo, max_level_with_food, get_stats,
+    calc_rebirth, REBIRTH_BOX_PETS,
 )
 from events_data import EVENTS, get_milestone_status
 from behemoth_engine import FACTION_ICONS, FACTION_ICON_DIR
@@ -191,9 +192,10 @@ total_any_inv = sum(
 
 # ── ABAS ───────────────────────────────────────────────────────────────────────
 st.divider()
-tab_calc, tab_plan, tab_help = st.tabs([
+tab_calc, tab_plan, tab_rebirth, tab_help = st.tabs([
     "🧮 " + t("Calculadora", "Calculator"),
     "📋 " + t("Planejador de Lote", "Batch Planner"),
+    "🔄 " + t("Renascimento", "Rebirth"),
     "📖 " + t("Instruções & Referência", "Instructions & Reference"),
 ])
 
@@ -767,7 +769,132 @@ with tab_plan:
             st.rerun()
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ABA 3 — INSTRUÇÕES & REFERÊNCIA
+# ABA 3 — RENASCIMENTO
+# ══════════════════════════════════════════════════════════════════════════════
+with tab_rebirth:
+    st.caption(t(
+        "Selecione um pet e seu estado atual para ver o que é recuperado ao renascer.",
+        "Select a pet and its current state to see what is recovered on rebirth.",
+    ))
+
+    rb1, rb2, rb3 = st.columns(3)
+    with rb1:
+        rb_pet = st.selectbox(t("Pet", "Pet"),
+                              pet_names, key="rb_pet")
+    with rb2:
+        rb_promo = st.selectbox(t("Promoção atual", "Current promotion"),
+                                promo_labels, key="rb_promo",
+                                format_func=tpromo)
+    with rb3:
+        rb_lvl = st.number_input(t("Nível atual", "Current level"),
+                                 min_value=1, max_value=MAX_LEVEL,
+                                 value=1, key="rb_lvl")
+
+    rb = calc_rebirth(int(rb_lvl), rb_promo)
+
+    rb_pet_info  = next(p for p in PETS if p[0] == rb_pet)
+    rb_faction   = rb_pet_info[1]
+    rb_pet_flags = PET_FLAGS.get(rb_pet, set())
+    rb_any_promo = "any_promo" in rb_pet_flags
+
+    rb_fc = FACTION_COLORS.get(_FACTION_KEY.get(rb_faction, "Liga"), "#5C3D1E")
+    st.markdown(
+        f'<div style="border-left:5px solid {rb_fc};padding:5px 14px;'
+        f'border-radius:0 8px 8px 0;background:{rb_fc}14;font-weight:700;margin:12px 0 6px;">'
+        f'🔄 {t("Recursos Recuperados", "Resources Recovered")} — '
+        f'{rb_pet} · {tpromo(rb_promo)} · {t("lv","lv")} {rb_lvl}</div>',
+        unsafe_allow_html=True,
+    )
+
+    _box_pets = ", ".join(REBIRTH_BOX_PETS)
+
+    _rr1, _rr2, _rr3, _rr4 = st.columns(4)
+    if rb_any_promo:
+        _rr1.metric(t("🐾 Cópias do pet", "🐾 Pet copies"),
+                    f"{rb['same_copies']:,}",
+                    help=t("Todas as cópias (any) usadas + 1 base",
+                           "All copies (any) used + 1 base"))
+        _rr2.metric(t("🎁 Caixas aleatórias", "🎁 Random boxes"),
+                    "—",
+                    help=t("Pet any_promo não usa caixas separadas",
+                           "any_promo pet has no separate box return"))
+    else:
+        _rr1.metric(t("🐾 Cópias do pet", "🐾 Pet copies"),
+                    f"{rb['same_copies']:,}",
+                    help=t(f"Cópias específicas de {rb_pet} devolvidas (cumulativo + 1 base)",
+                           f"Specific {rb_pet} copies returned (cumulative + 1 base)"))
+        _rr2.metric(t("🎁 Caixas aleatórias", "🎁 Random boxes"),
+                    f"{rb['any_boxes']:,}",
+                    help=t(f"Pode dar: {_box_pets}",
+                           f"Can give: {_box_pets}"))
+    _rr3.metric(t("🍗 Pet Food", "🍗 Pet Food"), f"{rb['food']:,}",
+                help=t("Metade do total gasto até este nível",
+                       "Half of total spent reaching this level"))
+    _rr4.metric(t("💎 Pet Essence", "💎 Pet Essence"), f"{rb['essence']:,}",
+                help=t("Metade da essência de nível + essência de promoção",
+                       "Half of level-up + promotion essence"))
+
+    st.divider()
+
+    # ── Impacto no evento ────────────────────────────────────────────────────
+    ev_pet_rb   = next(e for e in EVENTS if e["sheet"] == "Pet_Ranking")
+    ev_pname_rb = ev_pet_rb.get("name_pt", ev_pet_rb["name"]) if lang == "pt" else ev_pet_rb["name"]
+
+    st.markdown(f"**📅 {t('Impacto no Evento', 'Event Impact')} — {ev_pname_rb}**")
+    st.caption(t(
+        "O renascimento libera todos os pets gastos. Cada pet raro liberado conta para o evento (× 900 pts).",
+        "Rebirth releases all spent pets. Each released rare pet counts toward the event (× 900 pts).",
+    ))
+
+    _ei_rows = []
+    if not rb_any_promo and rb["same_copies"] > 0:
+        _ei_rows.append({
+            t("Origem", "Source"):  t(f"🐾 Cópias específicas de {rb_pet}", f"🐾 Specific {rb_pet} copies"),
+            t("Pets", "Pets"):      rb["same_copies"],
+            t("Taxa", "Rate"):      "× 900",
+            t("Pontos", "Points"):  f"{rb['same_copies'] * 900:,}",
+        })
+    if not rb_any_promo and rb["any_boxes"] > 0:
+        _ei_rows.append({
+            t("Origem", "Source"):  t(f"🎁 Caixas aleatórias ({_box_pets})", f"🎁 Random boxes ({_box_pets})"),
+            t("Pets", "Pets"):      rb["any_boxes"],
+            t("Taxa", "Rate"):      "× 900",
+            t("Pontos", "Points"):  f"{rb['any_boxes'] * 900:,}",
+        })
+    if rb_any_promo and rb["event_pets"] > 0:
+        _ei_rows.append({
+            t("Origem", "Source"):  t(f"🐾 Cópias de {rb_pet} (aceita qualquer)", f"🐾 {rb_pet} copies (any accepted)"),
+            t("Pets", "Pets"):      rb["event_pets"],
+            t("Taxa", "Rate"):      "× 900",
+            t("Pontos", "Points"):  f"{rb['event_pts']:,}",
+        })
+
+    if _ei_rows:
+        st.dataframe(pd.DataFrame(_ei_rows), use_container_width=True, hide_index=True)
+
+    _ep1, _ep2 = st.columns(2)
+    _ep1.metric(t("🐾 Total de pets liberados", "🐾 Total pets released"),
+                f"{rb['event_pets']:,}")
+    _ep2.metric(f"📊 {t('Total de pontos', 'Total points')} — {ev_pname_rb}",
+                f"{rb['event_pts']:,}")
+
+    ms_rb = "  ".join(
+        f"✅ {s['value']:,}" if s["reached"] else f"⬜ {s['value']:,}"
+        for s in get_milestone_status(ev_pet_rb["milestones"], rb["event_pts"])
+    )
+    st.caption(f"Milestones: {ms_rb}")
+
+    if st.button("📅 " + t("Enviar para Eventos", "Send to Events"), key="send_rb_evt"):
+        st.session_state["_pts_to_send_Pet_Ranking"]    = int(rb["event_pts"])
+        st.session_state["_calc_contrib_Pet_Ranking_4"] = int(rb["event_pts"])
+        st.session_state["_calc_sent_Pet_Ranking"]      = True
+        st.success(t(
+            f"✅ {rb['event_pts']:,} pts enviados para **{ev_pname_rb}**!",
+            f"✅ {rb['event_pts']:,} pts sent to **{ev_pname_rb}**!",
+        ))
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ABA 4 — INSTRUÇÕES & REFERÊNCIA
 # ══════════════════════════════════════════════════════════════════════════════
 with tab_help:
     _hi1, _hi2 = st.tabs([
