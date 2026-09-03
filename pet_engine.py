@@ -5,8 +5,10 @@ pet_engine.py — Pet Calculator data and calculation engine.
 
 PETS = [
     # (name, faction, faction_specific, active_skill, passive_buff)
+    # faction="All" = cross-faction pet (no faction restriction)
     ("Eggy",        "League", True,  "2 heroes gain Crit Rate & Crit DMG boost temporarily",                "Increased damage each time an enemy dies"),
     ("Zappy",       "League", False, "2 heroes gain Normal Attack DMG boost for 4 attacks",                 "Reduce enemy healing & boost skill damage"),
+    ("Breeze",      "League", True,  "—",                                                                   "—"),
     ("Candiboo",    "League", True,  "2 heroes gain Normal Atk Reduction & DMG boost temporarily",          "Increased Soldier Attack & HP"),
     ("Snowball",    "League", True,  "Pet attacks 2 enemies & reduces their Attack temporarily",            "Increased Soldier Attack & HP"),
     ("Howli",       "Horde",  False, "Pet attacks 2 enemies & increases their DMG taken temporarily",       "All heroes DMG increase & ignore enemy DMG reduction"),
@@ -20,7 +22,15 @@ PETS = [
     ("Pegasus",     "Nature", True,  "Pet attacks 2 enemies & reduces their Amplify DMG skill temporarily",  "Increased Soldier Attack & HP"),
     ("Snowpal",     "Nature", False, "Slow Attack & Movement of 3 enemies temporarily",                     "All heroes Attack increases + Increased Soldier Attack & HP"),
     ("Tidal Crab",  "Nature", True,  "—",                                                                   "—"),
+    ("Dart",        "All",    False, "—",                                                                   "2× buff vs regular universal pets (promotion). Accepts any pet as promo copy."),
 ]
+
+# Special per-pet flags that affect display and calculations.
+# any_promo  : all "same" copy requirements become "any" (any pet works for promotion)
+# no_choice_box: pet is not available from Rare Pet Choice Boxes
+PET_FLAGS: dict[str, set[str]] = {
+    "Dart": {"any_promo", "no_choice_box"},
+}
 
 PROMO_LIST = [
     # (min_lvl, label, tier, same_copies_cost, any_copies_cost, promo_essence)
@@ -115,7 +125,7 @@ TIER_TARGET_PROMO_LABEL = {
     "MYTHIC":    "MYTHIC",
 }
 
-FACTION_EMOJI = {"League": "🔵", "Horde": "🔴", "Nature": "🟢"}
+FACTION_EMOJI = {"League": "🔵", "Horde": "🔴", "Nature": "🟢", "All": "🌐"}
 
 # ── Pre-built lookup tables ────────────────────────────────────────────────────
 FOOD_AT_LEVEL = {lvl: food for lvl, food, _ in RARE_ALL}
@@ -151,40 +161,59 @@ def promo_cum(promo_label: str) -> tuple[int, int, int]:
 
 
 def calc_to_promo(target_label: str, current_level: int, current_promo_label: str,
-                  inv_food: int, inv_essence: int, inv_same: int, inv_any: int) -> dict:
-    """Resources needed to reach a specific target promotion from current state."""
+                  inv_food: int, inv_essence: int, inv_same: int, inv_any: int,
+                  any_promo: bool = False) -> dict:
+    """Resources needed to reach a specific target promotion from current state.
+
+    any_promo=True: pet accepts any copy for promotion (e.g. Dart) — all "same"
+    requirements collapse into the "any" pool; inv_same also counts as any.
+    """
     tgt = next(p for p in PROMO_LIST if p[1] == target_label)
     tgt_min_lvl = tgt[0]
 
     tgt_food_cum = FOOD_AT_LEVEL.get(tgt_min_lvl, 0)
     cur_food_cum = FOOD_AT_LEVEL.get(current_level, 0)
 
-    # Level-up essence: cumulative cost of levels between current and target min level
     tgt_lvl_ess = ESS_AT_LEVEL.get(tgt_min_lvl, 0)
     cur_lvl_ess = ESS_AT_LEVEL.get(current_level, 0)
 
-    # Promotion essence: accumulated cost of each individual promotion step
     tgt_same_cum, tgt_any_cum, tgt_promo_ess_cum = promo_cum(target_label)
     cur_same_cum, cur_any_cum, cur_promo_ess_cum = promo_cum(current_promo_label)
 
+    food_need    = max(0, tgt_food_cum - cur_food_cum - inv_food)
+    essence_need = max(0, (tgt_lvl_ess - cur_lvl_ess) + (tgt_promo_ess_cum - cur_promo_ess_cum) - inv_essence)
+
+    if any_promo:
+        # No "same" requirement — all promo copies are interchangeable; inv_same counts as any
+        effective_any_need = (tgt_any_cum - cur_any_cum) + (tgt_same_cum - cur_same_cum)
+        return {
+            "food":    food_need,
+            "essence": essence_need,
+            "same":    0,
+            "any":     max(0, effective_any_need - inv_any - inv_same),
+            "min_lvl": tgt_min_lvl,
+        }
+
     same_gross   = tgt_same_cum - cur_same_cum
-    surplus_same = max(0, inv_same - same_gross)   # surplus same copies can count as any
+    surplus_same = max(0, inv_same - same_gross)
     return {
-        "food":    max(0, tgt_food_cum - cur_food_cum - inv_food),
-        "essence": max(0, (tgt_lvl_ess - cur_lvl_ess) + (tgt_promo_ess_cum - cur_promo_ess_cum) - inv_essence),
+        "food":    food_need,
+        "essence": essence_need,
         "same":    max(0, same_gross - inv_same),
-        "any":     max(0, tgt_any_cum  - cur_any_cum  - inv_any - surplus_same),
+        "any":     max(0, tgt_any_cum - cur_any_cum - inv_any - surplus_same),
         "min_lvl": tgt_min_lvl,
     }
 
 
 def calc_milestone(tier: str, current_level: int, current_promo_label: str,
                    inv_food: int, inv_essence: int,
-                   inv_same_selected: int, total_any: int) -> dict:
+                   inv_same_selected: int, total_any: int,
+                   any_promo: bool = False) -> dict:
     """Resources remaining to reach the entry promotion of a broad tier (EPIC ☆ / LEGENDARY ☆ / MYTHIC)."""
     target_label = TIER_TARGET_PROMO_LABEL[tier]
     return calc_to_promo(target_label, current_level, current_promo_label,
-                         inv_food, inv_essence, inv_same_selected, total_any)
+                         inv_food, inv_essence, inv_same_selected, total_any,
+                         any_promo=any_promo)
 
 
 def calc_to_target(from_lvl: int, to_lvl: int) -> dict:

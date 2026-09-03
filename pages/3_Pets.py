@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import streamlit as st
 import pandas as pd
 from pet_engine import (
-    PETS, PROMO_LIST, TIER_RANK, PROMO_INDEX, FACTION_EMOJI,
+    PETS, PET_FLAGS, PROMO_LIST, TIER_RANK, PROMO_INDEX, FACTION_EMOJI,
     MAX_LEVEL, TIER_MIN_LEVEL, TIER_TARGET_PROMO_LABEL,
     FOOD_AT_LEVEL, ESS_AT_LEVEL, promo_cum,
     calc_milestone, calc_to_target, calc_to_promo, max_level_with_food, get_stats,
@@ -22,10 +22,12 @@ _BASE = os.path.dirname(os.path.dirname(__file__))
 
 # English pet faction → Portuguese icon key
 _FACTION_KEY = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza"}
-# Portuguese display names
-_FACTION_PT  = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza"}
+# Portuguese display names (All = cross-faction)
+_FACTION_PT  = {"League": "Liga", "Horde": "Horda", "Nature": "Natureza", "All": "Qualquer"}
 
 def _faction_icon(faction_en: str, width: int = 32):
+    if faction_en not in _FACTION_KEY:
+        return   # cross-faction pets have no single icon
     path = os.path.join(_BASE, FACTION_ICON_DIR, FACTION_ICONS[_FACTION_KEY[faction_en]])
     st.image(path, width=width)
 
@@ -242,12 +244,21 @@ with tab_calc:
 
     pet_info = next(p for p in PETS if p[0] == selected_pet)
     _, pet_faction, pet_fs, pet_skill, pet_passive = pet_info
+    _pet_flags = PET_FLAGS.get(selected_pet, set())
+    _any_promo = "any_promo" in _pet_flags
 
-    inv_same_selected = inv_copies[selected_pet] + (inv_box if use_boxes else 0)
-    total_any = sum(
-        inv_copies[name] for name, *_ in PETS
-        if name != selected_pet and not inv_exclude[name]
-    )
+    # For any_promo pets: copies of this pet count as "any"; choice boxes don't apply
+    if _any_promo:
+        inv_same_selected = 0
+        total_any = sum(
+            inv_copies[name] for name, *_ in PETS if not inv_exclude[name]
+        )  # includes selected pet itself — all count as any
+    else:
+        inv_same_selected = inv_copies[selected_pet] + (inv_box if use_boxes else 0)
+        total_any = sum(
+            inv_copies[name] for name, *_ in PETS
+            if name != selected_pet and not inv_exclude[name]
+        )
 
     ic1, ic2 = st.columns([1, 3])
     with ic1:
@@ -255,6 +266,16 @@ with tab_calc:
         faction_disp = _FACTION_PT[pet_faction] if lang == "pt" else pet_faction
         st.caption(f"**{t('Facção','Faction')}:** {faction_disp}")
         st.caption(f"**{t('Tipo','Type')}:** {_FS[pet_fs]}")
+    if "no_choice_box" in _pet_flags:
+        st.info(t(
+            "ℹ️ **Dart** não está disponível em Caixas de Escolha de Pet Raro.",
+            "ℹ️ **Dart** is not available from Rare Pet Choice Boxes.",
+        ))
+    if _any_promo:
+        st.info(t(
+            "🌐 **Dart** aceita qualquer pet como cópia de promoção — não há requisito de cópia específica.",
+            "🌐 **Dart** accepts any pet as a promotion copy — no same-pet requirement.",
+        ))
     with ic2:
         if pet_skill != "—":
             st.markdown(f"**🎯 {t('Habilidade Ativa','Active Skill')}:** {pet_skill}")
@@ -290,6 +311,7 @@ with tab_calc:
         _res_promo = calc_to_promo(
             target_promo_lbl, current_level, current_promo_lbl,
             inv_food, inv_ess, inv_same_selected, total_any,
+            any_promo=_any_promo,
         )
         _pm1, _pm2, _pm3, _pm4 = st.columns(4)
         _pm1.metric(t("🍗 Comida", "🍗 Food"),          f"{_res_promo['food']:,}")
@@ -362,15 +384,19 @@ with tab_calc:
 
                 # Gross cost from current state to this milestone (no inventory deducted)
                 need_food = max(0, FOOD_AT_LEVEL.get(tgt_min_lvl, 0) - FOOD_AT_LEVEL.get(current_level, 0))
-                need_same = max(0, tgt_same_cum - cur_same_cum)
-                need_any  = max(0, tgt_any_cum  - cur_any_cum)
                 need_ess  = max(0,
                     (ESS_AT_LEVEL.get(tgt_min_lvl, 0) - ESS_AT_LEVEL.get(current_level, 0))
                     + (tgt_promo_ess_cum - cur_promo_ess_cum))
-
-                # What's available in inventory
-                surplus_same = max(0, inv_same_selected - need_same)
-                have_any     = total_any + surplus_same
+                if _any_promo:
+                    need_same = 0
+                    need_any  = max(0, (tgt_any_cum - cur_any_cum) + (tgt_same_cum - cur_same_cum))
+                    have_any  = total_any  # total_any already includes all copies of Dart
+                    surplus_same = 0
+                else:
+                    need_same    = max(0, tgt_same_cum - cur_same_cum)
+                    need_any     = max(0, tgt_any_cum  - cur_any_cum)
+                    surplus_same = max(0, inv_same_selected - need_same)
+                    have_any     = total_any + surplus_same
 
                 _cr = t("Recurso", "Resource")
                 _cn = t("Necessário", "Need")
@@ -382,10 +408,13 @@ with tab_calc:
                      _cn: f"{need_food:,}",
                      _ch: f"{inv_food:,}",
                      _cm: f"{max(0, need_food - inv_food):,}"},
-                    {_cr: f"📦 {selected_pet}",
-                     _cn: f"{need_same:,}",
-                     _ch: f"{inv_same_selected:,}",
-                     _cm: f"{max(0, need_same - inv_same_selected):,}"},
+                ]
+                if not _any_promo:
+                    _rows.append({_cr: f"📦 {selected_pet}",
+                                  _cn: f"{need_same:,}",
+                                  _ch: f"{inv_same_selected:,}",
+                                  _cm: f"{max(0, need_same - inv_same_selected):,}"})
+                _rows += [
                     {_cr: t("🎲 Any pet", "🎲 Any pet"),
                      _cn: f"{need_any:,}",
                      _ch: f"{have_any:,}",
